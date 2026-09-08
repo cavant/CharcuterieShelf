@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  android:id="@+id/widgetBackground"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:orientation="horizontal"
+  android:background="@drawable/widget_card_background"
+  android:padding="8dp"
+  android:gravity="center_vertical">
+
+  <!-- Cover Art -->
+  <ImageView
+    android:id="@+id/widgetAlbumArt"
+    android:layout_width="76dp"
+    android:layout_height="76dp"
+    android:scaleType="centerCrop"
+    android:src="@drawable/icon" />
+
+  <!-- Info & Controls Column -->
+  <LinearLayout
+    android:layout_width="0dp"
+    android:layout_height="match_parent"
+    android:layout_weight="1"
+    android:layout_marginStart="10dp"
+    android:layout_marginEnd="6dp"
+    android:orientation="vertical"
+    android:gravity="center_vertical">
+
+    <!-- Title -->
+    <TextView
+      android:id="@+id/widgetMediaTitle"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:ellipsize="end"
+      android:maxLines="1"
+      android:text="Title"
+      android:textColor="#FFFFFF"
+      android:textSize="14sp"
+      android:textStyle="bold" />
+
+    <!-- Author / Artist -->
+    <TextView
+      android:id="@+id/widgetArtistText"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="1dp"
+      android:ellipsize="end"
+      android:maxLines="1"
+      android:text="Artist"
+      android:textColor="#A0A0A0"
+      android:textSize="12sp" />
+
+    <!-- Playback Action Buttons Row -->
+    <LinearLayout
+      android:id="@+id/widgetButtonContainer"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="6dp"
+      android:orientation="horizontal"
+      android:gravity="center_vertical">
+
+      <ImageView
+        android:id="@+id/widgetRewindButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="4dp"
+        android:src="@drawable/exo_icon_rewind"
+        android:contentDescription="Rewind" />
+
+      <ImageView
+        android:id="@+id/widgetPlayPauseButton"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:padding="4dp"
+        android:src="@drawable/ic_media_play_dark"
+        android:contentDescription="Play/Pause" />
+
+      <ImageView
+        android:id="@+id/widgetFastForwardButton"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="4dp"
+        android:src="@drawable/exo_icon_fastforward"
+        android:contentDescription="Fast Forward" />
+    </LinearLayout>
+
+  </LinearLayout>
+
+  <!-- Small App Badge / Icon -->
+  <ImageView
+    android:id="@+id/tinyCornerIcon"
+    android:layout_width="16dp"
+    android:layout_height="16dp"
+    android:layout_gravity="top|end"
+    android:layout_marginTop="2dp"
+    android:layout_marginEnd="2dp"
+    android:alpha="0.6"
+    android:src="@drawable/icon_monochrome"
+    android:contentDescription="CharcuterieShelf" />
+
+</LinearLayout>
