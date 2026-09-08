@@ -68,11 +68,13 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 ---
 
 ### 🎙️ Pocket Casts-Inspired Podcatcher Power
+- **Full Episode Browsing**: View the complete list of all episodes for any podcast (fetched from server), not just downloaded ones—browse, discover, and queue new content without opening a browser.
+- **Downloaded-First Smart Sorting**: Downloaded episodes automatically float to the top of the list with a clear section divider, so your offline-ready content is always at your fingertips.
 - **Trim Silence**: Real-time silence skipping powered by ExoPlayer's native audio pipeline—no gaps, no pitch changes.
 - **Intro & Outro Skipping**: Set custom skip durations per podcast show (e.g. skip first 45s of intro ads, skip last 30s of credits).
 - **Per-Show Playback Speeds**: Automatically remembers your preferred listening speed for each podcast independently.
 - **End of Episode Sleep Timer**: Automatic sleep timer calculated precisely to the end of the current podcast episode.
-- **Filter Chips & Instant Search**: Quickly filter episode lists by *All*, *Unplayed*, *In Progress*, and *Downloaded*, or search episode titles and show notes in real time.
+- **Filter Chips & Instant Search**: Quickly filter episode lists by *All*, *Unplayed*, *In Progress*, *Complete*, and *Downloaded*, or search episode titles and show notes in real time.
 
 <div align="center">
   <img alt="Pocket Casts Settings Modal" src="screenshots/07_pocketcasts_settings.png" width="360px" />

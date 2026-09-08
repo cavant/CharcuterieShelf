@@ -66,7 +66,13 @@
       </div>
     </div>
 
-    <template v-for="episode in episodesSorted">
+    <template v-for="(episode, index) in episodesSorted">
+      <!-- Divider between downloaded and non-downloaded sections -->
+      <div v-if="index === downloadedSectionEndIndex && downloadedSectionEndIndex > 0 && filterKey !== 'downloaded'" :key="'divider-' + episode.id" class="flex items-center py-2 px-1 opacity-60">
+        <div class="flex-grow border-t border-border/60" />
+        <span class="px-3 text-xs text-fg-muted font-medium uppercase tracking-wide">Not Downloaded</span>
+        <div class="flex-grow border-t border-border/60" />
+      </div>
       <tables-podcast-episode-row :episode="episode" :local-episode="localEpisodeMap[episode.id]" :library-item-id="libraryItemId" :local-library-item-id="localLibraryItemId" :is-local="isLocal" :sort-key="sortKey" :key="episode.id" @addToPlaylist="addEpisodeToPlaylist" />
     </template>
 
@@ -218,7 +224,7 @@ export default {
       })
     },
     episodesSorted() {
-      return this.episodesFiltered.sort((a, b) => {
+      const sorted = this.episodesFiltered.slice().sort((a, b) => {
         let aValue
         let bValue
 
@@ -242,6 +248,27 @@ export default {
         }
         return String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' })
       })
+
+      // Float downloaded episodes to the top (Pocket Casts style)
+      if (this.filterKey !== 'downloaded') {
+        const downloaded = sorted.filter((ep) => !!this.localEpisodeMap[ep.id])
+        const notDownloaded = sorted.filter((ep) => !this.localEpisodeMap[ep.id])
+        return [...downloaded, ...notDownloaded]
+      }
+      return sorted
+    },
+    // Index in episodesSorted where downloaded episodes end and non-downloaded begin
+    downloadedSectionEndIndex() {
+      const sorted = this.episodesSorted
+      let count = 0
+      for (const ep of sorted) {
+        if (this.localEpisodeMap[ep.id]) {
+          count++
+        } else {
+          break
+        }
+      }
+      return count
     },
     // Map of local episodes where server episode id is key
     localEpisodeMap() {
@@ -259,7 +286,7 @@ export default {
       return _sel?.text || ''
     },
     filterKey() {
-      return this.$store.getters['user/getUserSetting']('podcastEpisodesFilterBy') || 'incomplete'
+      return this.$store.getters['user/getUserSetting']('podcastEpisodesFilterBy') || 'all'
     },
     sortKey: {
       get() {

@@ -66,11 +66,13 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
   - `light` (Crisp clean white `#ffffff`)
 
 ### 2.3 Pocket Casts-Inspired Podcatcher Playback
+- **Full Episode Browsing**: All episodes from server displayed when tapping a podcast, not just downloaded ones.
+- **Downloaded-First Smart Sort**: Downloaded episodes automatically float to the top of the episode list with a visual section divider in `EpisodesTable.vue`.
 - **Silence Trimming**: ExoPlayer `skipSilenceEnabled = true` exposed via `AbsAudioPlayer.setSkipSilence({ enabled })`.
 - **Intro & Outro Skipping**: Configurable seconds (`skipFirst` and `skipLast`) stored per-podcast in `$localStore` via `components/modals/PodcastSettingsModal.vue`.
 - **Custom Playback Speeds**: Remembers playback speeds per podcast show.
 - **End of Episode Sleep Timer**: Automatically computes remaining episode time in `SleepTimerModal.vue`.
-- **Quick Filters & Search**: Real-time title search and horizontal status chips (`All`, `Unplayed`, `In Progress`, `Downloaded`) in `EpisodesTable.vue`.
+- **Quick Filters & Search**: Real-time title search and horizontal status chips (`All`, `Unplayed`, `In Progress`, `Complete`, `Downloaded`) in `EpisodesTable.vue`.
 
 ### 2.4 Modern Material 3 Playback Widget
 - Home screen widget powered by `MediaPlayerWidget.kt` and `res/layout/media_player_widget.xml`.
