@@ -11,7 +11,7 @@
 
 <br/>
 
-<img alt="CharcuterieShelf Demo Screens" src="screenshots/DeviceDemoScreens.png" width="85%" />
+<img alt="CharcuterieShelf Demo Screens" src="screenshots/DeviceDemoScreens.png" width="100%" />
 
 </div>
 
@@ -25,13 +25,44 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 
 ---
 
-## ✨ Key Features
+## ✨ Key Features & Screenshots
 
 ### 🚀 Unified Local & Remote Server Switching
 - Configure a single server profile with both your **LAN Address** (`http://192.168.1.x:13378`) and **Remote Address** (`https://audio.example.com`).
 - Define a comma-separated list of your home **Wi-Fi SSIDs**.
 - When connected to your home network, the app automatically switches to local LAN speeds for instantaneous streaming and high-speed offline downloads.
 - When you step out the door, it smoothly transitions to remote streaming—all with uninterrupted session progress.
+
+<div align="center">
+  <img alt="Smart Local and Remote Server Switcher" src="screenshots/01_server_connect.png" width="360px" />
+</div>
+
+---
+
+### 📚 Gourmet Library & Details Experience
+- Full high-fidelity bookshelf layout with realistic wood shelving and cover art caching.
+- Direct-to-stream and offline download management.
+- Real-time progress tracking with hours/minutes remaining.
+
+<div align="center">
+  <img alt="Bookshelf Library" src="screenshots/02_bookshelf.png" width="360px" style="margin-right: 16px;" />
+  <img alt="Book Details Page" src="screenshots/03_book_details.png" width="360px" />
+</div>
+
+---
+
+### 🎙️ Pocket Casts-Inspired Podcatcher Power
+- **Trim Silence**: Real-time silence skipping powered by ExoPlayer's native audio pipeline—no gaps, no pitch changes.
+- **Intro & Outro Skipping**: Set custom skip durations per podcast show (e.g. skip first 45s of intro ads, skip last 30s of credits).
+- **Per-Show Playback Speeds**: Automatically remembers your preferred listening speed for each podcast independently.
+- **End of Episode Sleep Timer**: Automatic sleep timer calculated precisely to the end of the current podcast episode.
+- **Filter Chips & Instant Search**: Quickly filter episode lists by *All*, *Unplayed*, *In Progress*, and *Downloaded*, or search episode titles and show notes in real time.
+
+<div align="center">
+  <img alt="Pocket Casts Settings Modal" src="screenshots/07_pocketcasts_settings.png" width="360px" />
+</div>
+
+---
 
 ### 🎨 Material You & 8 Curated Themes
 - **Material You (Dynamic Monet)**: Extracts color accents from your Android 12+ system wallpaper and applies them across the entire app UI and player controls.
@@ -43,24 +74,30 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 - **Midnight Slate**: Crisp modern dark slate with cyan accents.
 - **Default Dark & Light**: Balanced neutral charcoal and clean daytime themes.
 
-### 🎙️ Pocket Casts-Inspired Podcatcher Power
-- **Trim Silence**: Real-time silence skipping powered by ExoPlayer's native audio pipeline—no gaps, no pitch changes.
-- **Intro & Outro Skipping**: Set custom skip durations per podcast show (e.g. skip first 45s of intro ads, skip last 30s of credits).
-- **Per-Show Playback Speeds**: Automatically remembers your preferred listening speed for each podcast independently.
-- **End of Episode Sleep Timer**: Automatic sleep timer calculated precisely to the end of the current podcast episode.
-- **Filter Chips & Instant Search**: Quickly filter episode lists by *All*, *Unplayed*, *In Progress*, and *Downloaded*, or search episode titles and show notes in real time.
+<div align="center">
+  <img alt="Theme Selector" src="screenshots/08_theme_picker.png" width="360px" />
+</div>
+
+---
+
+### ✏️ Full In-App Web Client Parity
+No need to open the desktop browser just to fix a typo or chapter mark:
+- **Interactive Chapter Editor**: Batch-adjust chapters, shift start times, fine-tune timestamps with `+/- 1s` buttons, set from individual audio tracks, or fetch official Audible chapters by ASIN.
+- **Provider Match**: Search Google Books, Audible, and OpenLibrary with granular field-by-field merge controls.
+- **Cover Art Manager**: Upload new images from your device gallery/camera, paste an image URL, or search OpenLibrary/Audible for high-res cover art.
+
+<div align="center">
+  <img alt="In-App Chapter Editor" src="screenshots/04_edit_chapters.png" width="300px" style="margin-right: 12px;" />
+  <img alt="In-App Match Provider" src="screenshots/05_edit_match.png" width="300px" style="margin-right: 12px;" />
+  <img alt="In-App Cover Manager" src="screenshots/06_edit_cover.png" width="300px" />
+</div>
+
+---
 
 ### 📱 Modern Material 3 Playback Widget
 - Home screen widget styled with Material 3 card curvature and elevated container styling.
 - Smooth rounded-corner album art previews powered by Glide transformations.
 - Instant responsive controls: Rewind 10s, Play/Pause, and Fast-Forward 10s directly from your Android launcher.
-
-### ✏️ Full In-App Web Client Parity
-No need to open the desktop browser just to fix a typo or chapter mark:
-- **Details Editor**: Modify title, subtitle, authors, narrators, series, sequence, genres, tags, description, and ISBN/ASIN.
-- **Interactive Chapter Editor**: Batch-adjust chapters, shift start times, fine-tune timestamps with +/- 1s buttons, or fetch official Audible chapters by ASIN.
-- **Cover Art Manager**: Upload new images from your device gallery, paste an image URL, or search OpenLibrary/Audible for high-res cover art.
-- **Provider Match**: Search Google Books, Audible, and OpenLibrary with granular field-by-field merge controls.
 
 ---
 
