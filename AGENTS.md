@@ -83,6 +83,16 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
   - Match tab (Online provider search via Google Books, Audible, OpenLibrary).
   - Cover tab (Upload, URL import, provider cover selection).
 
+### 2.6 Dedicated Audiobooks & Podcasts Medium Switcher
+- Two-cell top-level segmented toggle (`MediaSectionSwitcher.vue`) positioned below the Appbar.
+- Instantly switches active library between books and podcasts while preserving independent navigation states.
+- Automated creation modal if no podcast library exists on the server.
+
+### 2.7 Pocket Casts OPML Import & Device Storage Integrity
+- OPML / XML feed import modal (`OpmlImportModal.vue`) supporting Pocket Casts subscription exports.
+- Dual-mode input (file picker and text paste), feed preview, filter search, and batch creation on the server.
+- Device-first local download architecture ensures media files remain on device while syncing progress with the server.
+
 ---
 
 ## 3. Important Rules & Constraints for AI Agents
@@ -102,6 +112,13 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 > After building release or debug APKs, copy the resulting binary to both:
 > 1. `E:\Google Drive\CharcuterieShelf.apk`
 > 2. `C:\Users\Connor\OneDrive\CharcuterieShelf.apk`
+
+> [!IMPORTANT]
+> **Mandatory Documentation Maintenance**:
+> Any time the application is updated with new or modified features, agents MUST update project documentation to accurately reflect the current feature set. Specifically:
+> 1. Maintain an up-to-date, comprehensive feature list and screenshots in `readme.md`.
+> 2. Update `walkthrough.md` to document the latest feature set and verification results.
+> It is not necessary to list transient bug fixes, but user-facing capabilities must always be comprehensively documented.
 
 ---
 

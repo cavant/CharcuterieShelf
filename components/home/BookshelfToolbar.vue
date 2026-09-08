@@ -12,6 +12,7 @@
             <div v-show="hasFilters" class="absolute top-0 right-2 w-2 h-2 rounded-full bg-success border border-green-300 shadow-sm z-10 pointer-events-none" />
           </div>
           <span class="material-symbols text-2xl px-2" @click="showSortModal = true">sort</span>
+          <span v-if="isPodcast" class="material-symbols text-2xl px-2 text-accent cursor-pointer" title="Import OPML" @click="$eventBus.$emit('open-opml-modal')">upload_file</span>
         </template>
         <span v-if="seriesBookPage" class="material-symbols text-2xl px-2" @click="downloadSeries">download</span>
         <span v-if="(page == 'library' && isBookLibrary) || seriesBookPage" class="material-symbols text-2xl px-2" @click="showMoreMenuDialog = true">more_vert</span>

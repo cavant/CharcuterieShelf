@@ -1,16 +1,35 @@
 <template>
-  <div class="w-full h-full relative overflow-hidden">
+  <div class="w-full h-full relative overflow-hidden flex flex-col">
     <template v-if="!showSelectedFeed">
-      <div class="w-full mx-auto h-20 flex items-center px-2">
+      <div class="w-full mx-auto pt-3 px-2">
         <form class="w-full" @submit.prevent="submit">
           <ui-text-input v-model="searchInput" :disabled="processing || !socketConnected" :placeholder="$strings.MessagePodcastSearchField" text-size="sm" />
         </form>
       </div>
 
+      <!-- Pocket Casts OPML Import Action Card -->
+      <div class="px-2 pt-2">
+        <div
+          class="flex items-center justify-between px-3 py-2.5 bg-secondary hover:bg-primary/60 rounded-xl border border-border cursor-pointer transition-all shadow-sm"
+          @click="showOpmlModal = true"
+        >
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent">
+              <span class="material-symbols text-xl">upload_file</span>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-fg">Import from Pocket Casts (OPML)</p>
+              <p class="text-xxs text-fg-muted">Upload an OPML export file or paste subscription XML</p>
+            </div>
+          </div>
+          <span class="material-symbols text-lg text-fg-muted">chevron_right</span>
+        </div>
+      </div>
+
       <div v-if="!socketConnected" class="w-full text-center py-6">
         <p class="text-lg text-error">{{ $strings.MessageNoNetworkConnection }}</p>
       </div>
-      <div v-else class="w-full mx-auto pb-2 overflow-y-auto overflow-x-hidden h-[calc(100%-85px)]">
+      <div v-else class="w-full mx-auto pb-2 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
         <p v-if="termSearched && !results.length && !processing" class="text-center text-xl">{{ $strings.MessageNoPodcastsFound }}</p>
         <template v-for="podcast in results">
           <div :key="podcast.id" class="p-2 border-b border-fg border-opacity-10" @click="selectPodcast(podcast)">
@@ -48,6 +67,9 @@
     <div v-show="processing" class="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black bg-opacity-25 z-40">
       <ui-loading-indicator />
     </div>
+
+    <!-- Pocket Casts OPML Import Modal -->
+    <modals-podcast-opml-import-modal v-model="showOpmlModal" />
   </div>
 </template>
 
@@ -61,7 +83,8 @@ export default {
       results: [],
       selectedPodcastFeed: null,
       selectedPodcast: null,
-      showSelectedFeed: false
+      showSelectedFeed: false,
+      showOpmlModal: false
     }
   },
   computed: {
@@ -70,6 +93,9 @@ export default {
     }
   },
   methods: {
+    openOpmlModal() {
+      this.showOpmlModal = true
+    },
     clearSelected() {
       this.selectedPodcastFeed = null
       this.selectedPodcast = null
@@ -141,9 +167,11 @@ export default {
   },
   mounted() {
     this.$eventBus.$on('library-changed', this.libraryChanged)
+    this.$eventBus.$on('open-opml-modal', this.openOpmlModal)
   },
   beforeDestroy() {
     this.$eventBus.$off('library-changed', this.libraryChanged)
+    this.$eventBus.$off('open-opml-modal', this.openOpmlModal)
   }
 }
 </script>

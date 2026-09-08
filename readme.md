@@ -39,6 +39,21 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 
 ---
 
+### 🔀 Dedicated Audiobooks & Podcasts Section Switcher
+- **Two-Cell Top-Level Switcher**: Positioned right beneath the top appbar, toggle effortlessly between your Audiobook libraries and Podcast subscriptions.
+- **Dedicated Medium Interfaces**: Keeps your books and podcasts completely separate with dedicated navigation bars, toolbars, and layouts tailored to each medium.
+- **Smart Server Integration**: Automatically detects audiobook and podcast libraries on your server. If your server doesn't have a podcast library configured yet, an intuitive inline modal lets you create one with custom folder mapping in seconds!
+
+---
+
+### 📥 Pocket Casts OPML Import & Device Storage Integrity
+- **Pocket Casts OPML Import**: Directly import your podcast subscription lists exported from Pocket Casts (`.opml`, `.xml`, or text paste).
+- **Feed Preview & Filtering**: Live feed parsing, search filtering, and individual or bulk select/deselect checkboxes before importing.
+- **Folder & Auto-Download Configuration**: Choose your target server destination folder and toggle automatic episode downloads.
+- **Device-First Downloads with Server Metadata Sync**: Downloaded podcast episode audio files remain safely on your physical device for reliable offline listening, while episode titles, show notes, and playback progress seamlessly sync with your server.
+
+---
+
 ### 📚 Gourmet Library & Details Experience
 - Full high-fidelity bookshelf layout with realistic wood shelving and cover art caching.
 - Direct-to-stream and offline download management.
