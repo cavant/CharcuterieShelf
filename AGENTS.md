@@ -99,8 +99,8 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 
 > [!CAUTION]
 > **Preserve Android Application ID**:
-> The internal Android package name / applicationId **MUST remain `com.audiobookshelf.app`**.
-> This guarantees that newly compiled APKs install as seamless updates over previous builds without erasing the user's downloaded media, local SQLite database, or connection settings.
+> The internal Android package name / applicationId is **`com.charcuterieshelf.app`**.
+> This provides complete autonomy from the upstream Play Store app, avoids signature conflicts or Play Store update ownership blocks, and allows side-by-side installation. All future APK builds must retain `com.charcuterieshelf.app`.
 
 > [!IMPORTANT]
 > **Headless Execution & No Interactive Prompts**:
@@ -147,7 +147,7 @@ cd android
 .\gradlew.bat assembleDebug
 # Output: android/app/build/outputs/apk/debug/app-debug.apk
 
-# Build Signed Release APK (applicationId: com.audiobookshelf.app)
+# Build Signed Release APK (applicationId: com.charcuterieshelf.app)
 .\gradlew.bat assembleRelease
 # Output: android/app/build/outputs/apk/release/app-release.apk
 ```

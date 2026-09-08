@@ -1,5 +1,5 @@
 {
-	"appId": "com.audiobookshelf.app",
+	"appId": "com.charcuterieshelf.app",
 	"appName": "CharcuterieShelf",
 	"webDir": "dist",
 	"plugins": {
