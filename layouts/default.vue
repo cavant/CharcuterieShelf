@@ -10,6 +10,7 @@
     <modals-select-local-folder-modal />
     <modals-rssfeeds-rss-feed-modal />
     <modals-podcast-opml-import-modal />
+    <modals-app-update-modal />
     <app-side-drawer :key="currentLang" />
     <readers-reader />
   </div>
@@ -410,6 +411,14 @@ export default {
 
       AbsLogger.info({ tag: 'default', message: 'mounted: fully initialized' })
       this.$eventBus.$emit('abs-ui-ready')
+
+      setTimeout(() => {
+        if (this.$appUpdater && this.networkConnected) {
+          this.$appUpdater.checkForUpdate().catch((e) => {
+            console.log('[default] Background update check ignored:', e?.message)
+          })
+        }
+      }, 5000)
     }
   },
   beforeDestroy() {

@@ -5,7 +5,7 @@
 ### *A gourmet client for self-hosted audiobooks and podcasts with Material You theming, Pocket Casts playback controls, and smart local/remote switching.*
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Support-Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/themagicsalami)
-[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.2--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
+[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.3--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf)
 [![Author: TheMagicSalami](https://img.shields.io/badge/Author-TheMagicSalami-red?style=for-the-badge)](https://github.com/cavant)
@@ -27,6 +27,14 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 ---
 
 ## ✨ Key Features & Screenshots
+
+### 📲 In-App Updating via GitHub Releases
+- **Automated Update Detection**: CharcuterieShelf checks GitHub Releases for newer versions automatically in the background on startup.
+- **One-Tap Download & Install**: Streamlines the APK download with a live progress bar and automatically launches Android's system package installer without requiring manual browser sideloading.
+- **On-Demand Checking & Release Notes**: Check for updates anytime from **Settings → App Updates**, read formatted changelogs, or tap the pulsing **Update Available** badge in the navigation drawer.
+- **Universal Android Compatibility**: Native support for Android 8 through 16 (API 26–36) with standard `REQUEST_INSTALL_PACKAGES` permission handling and secure `FileProvider` URI isolation.
+
+---
 
 ### 🚀 Unified Local & Remote Server Switching
 - Configure a single server profile with both your **LAN Address** (`http://192.168.1.x:13378`) and **Remote Address** (`https://audio.example.com`).

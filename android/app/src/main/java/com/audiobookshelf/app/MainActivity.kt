@@ -19,6 +19,7 @@ import com.anggrayudi.storage.SimpleStorage
 import com.anggrayudi.storage.SimpleStorageHelper
 import com.audiobookshelf.app.managers.DbManager
 import com.audiobookshelf.app.player.PlayerNotificationService
+import com.audiobookshelf.app.plugins.AbsAppUpdater
 import com.audiobookshelf.app.plugins.AbsAudioPlayer
 import com.audiobookshelf.app.plugins.AbsDatabase
 import com.audiobookshelf.app.plugins.AbsDownloader
@@ -52,6 +53,7 @@ class MainActivity : BridgeActivity() {
     registerPlugin(AbsDatabase::class.java)
     registerPlugin(AbsLogger::class.java)
     registerPlugin(AbsThemePlugin::class.java)
+    registerPlugin(AbsAppUpdater::class.java)
 
     super.onCreate(savedInstanceState)
     Log.d(tag, "onCreate")

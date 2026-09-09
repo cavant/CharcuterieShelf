@@ -175,6 +175,59 @@
       </div>
     </template>
 
+    <!-- App Updates -->
+    <p class="uppercase text-xs font-semibold text-fg-muted mb-3 mt-10">App Updates</p>
+    <div class="rounded-2xl bg-primary/30 border border-border/40 p-5 mb-8 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center space-x-3">
+          <span class="material-symbols text-accent text-2xl">system_update</span>
+          <div>
+            <h3 class="text-sm font-bold text-fg leading-tight">CharcuterieShelf Updates</h3>
+            <p class="text-xs text-fg-muted">Installed: <span class="font-mono text-fg font-semibold">v{{ $config.version }}</span></p>
+          </div>
+        </div>
+        <span v-if="updateAvailable" class="px-2 py-0.5 rounded-full text-2xs font-extrabold bg-accent text-black animate-pulse">
+          UPDATE AVAILABLE
+        </span>
+        <span v-else-if="!isCheckingUpdates" class="px-2 py-0.5 rounded-full text-2xs font-semibold bg-secondary text-fg-muted">
+          UP TO DATE
+        </span>
+      </div>
+
+      <div v-if="updateAvailable && latestRelease" class="bg-accent/10 border border-accent/30 rounded-xl p-3.5 mb-3 flex items-center justify-between">
+        <div class="pr-2">
+          <p class="text-xs font-bold text-accent">New Version: {{ latestRelease.tagName }}</p>
+          <p class="text-2xs text-fg-muted truncate max-w-[200px]">{{ latestRelease.name }}</p>
+        </div>
+        <button class="px-3 py-1.5 rounded-lg bg-accent text-black font-bold text-xs hover:brightness-105 active:scale-95 transition-transform whitespace-nowrap" @click="openAppUpdateModal">
+          View & Install
+        </button>
+      </div>
+
+      <p class="text-xs text-fg-muted mb-4 leading-relaxed">
+        Automatically checks GitHub Releases for new updates and installs APKs directly without requiring manual sideloading.
+      </p>
+
+      <div class="flex items-center space-x-3">
+        <button
+          class="flex-1 py-2.5 px-4 rounded-xl bg-secondary text-fg font-semibold text-xs flex items-center justify-center space-x-2 hover:bg-bg-hover active:scale-95 transition-transform disabled:opacity-50"
+          :disabled="isCheckingUpdates"
+          @click="checkManualUpdate"
+        >
+          <span v-if="isCheckingUpdates" class="material-symbols animate-spin text-sm">progress_activity</span>
+          <span v-else class="material-symbols text-sm">refresh</span>
+          <span>{{ isCheckingUpdates ? 'Checking for Updates...' : 'Check for Updates' }}</span>
+        </button>
+        <button
+          class="py-2.5 px-3 rounded-xl bg-secondary/60 text-fg-muted hover:text-fg text-xs flex items-center justify-center transition-colors"
+          title="Open Releases on GitHub"
+          @click="openGitHubReleases"
+        >
+          <span class="material-symbols text-base">open_in_new</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Support CharcuterieShelf -->
     <p class="uppercase text-xs font-semibold text-fg-muted mb-3 mt-10">Support & Community</p>
     <div class="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-5 mb-8 shadow-sm">
@@ -423,6 +476,15 @@ export default {
     }
   },
   computed: {
+    updateAvailable() {
+      return this.$appUpdater?.updateAvailable || false
+    },
+    latestRelease() {
+      return this.$appUpdater?.latestRelease || null
+    },
+    isCheckingUpdates() {
+      return this.$appUpdater?.isChecking || false
+    },
     // This is flipped because alt view was the default until v0.9.61-beta
     enableBookshelfView: {
       get() {
@@ -559,6 +621,28 @@ export default {
     }
   },
   methods: {
+    async checkManualUpdate() {
+      await this.$hapticsImpact()
+      if (!this.$appUpdater) return
+      const res = await this.$appUpdater.checkForUpdate(true)
+      if (res?.updateAvailable) {
+        this.$eventBus.$emit('open-app-update-modal', res.latestRelease)
+      } else if (res?.error) {
+        this.$toast.error('Update check failed: ' + res.error)
+      } else {
+        this.$toast.success('CharcuterieShelf is up to date (v' + this.$config.version + ')')
+      }
+    },
+    openAppUpdateModal() {
+      this.$eventBus.$emit('open-app-update-modal', this.latestRelease)
+    },
+    async openGitHubReleases() {
+      try {
+        await Browser.open({ url: 'https://github.com/cavant/CharcuterieShelf/releases' })
+      } catch (e) {
+        window.open('https://github.com/cavant/CharcuterieShelf/releases', '_blank')
+      }
+    },
     sleepTimerLengthModalSelection(value) {
       this.settings.sleepTimerLength = value
       this.saveSettings()

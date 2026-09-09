@@ -27,6 +27,21 @@
           <p v-if="serverSettings.version" class="text-2xs text-fg-muted/70">v{{ serverSettings.version }}</p>
         </div>
 
+        <!-- Update Available Banner -->
+        <button
+          v-if="updateAvailable"
+          class="w-full mb-3 py-2 px-3 rounded-lg bg-accent/20 border border-accent/40 text-accent text-xs font-bold flex items-center justify-between hover:bg-accent/30 active:scale-95 transition-all shadow-sm"
+          @click="openAppUpdateModal"
+        >
+          <div class="flex items-center space-x-2">
+            <span class="material-symbols text-base">system_update</span>
+            <span>Update Available</span>
+          </div>
+          <span class="text-2xs bg-accent text-black font-extrabold px-1.5 py-0.5 rounded">
+            {{ latestRelease ? latestRelease.tagName : 'NEW' }}
+          </span>
+        </button>
+
         <!-- Buy Me a Coffee Button -->
         <button class="w-full mb-3 py-1.5 px-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold flex items-center justify-center space-x-1.5 hover:bg-amber-500/20 active:scale-95 transition-all" @click="openBuyMeACoffee">
           <span>☕</span>
@@ -34,7 +49,13 @@
         </button>
 
         <div class="flex items-center">
-          <p class="text-2xs font-semibold text-fg-muted">CharcuterieShelf v{{ $config.version }}</p>
+          <div class="flex items-center space-x-1.5" :class="updateAvailable ? 'cursor-pointer' : ''" @click="updateAvailable ? openAppUpdateModal() : null">
+            <p class="text-2xs font-semibold text-fg-muted">CharcuterieShelf v{{ $config.version }}</p>
+            <span v-if="updateAvailable" class="flex h-2 w-2 relative">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+            </span>
+          </div>
           <div class="flex-grow" />
           <div v-if="user" class="flex items-center" @click="disconnect">
             <p class="text-xs pr-2">{{ $strings.ButtonDisconnect }}</p>
@@ -95,6 +116,12 @@ export default {
     },
     isConnectedViaLocal() {
       return this.$store.getters['user/getIsConnectedViaLocal']
+    },
+    updateAvailable() {
+      return this.$appUpdater?.updateAvailable || false
+    },
+    latestRelease() {
+      return this.$appUpdater?.latestRelease || null
     },
     navItems() {
       var items = [
@@ -187,6 +214,11 @@ export default {
     },
     clickBackground() {
       this.show = false
+    },
+    async openAppUpdateModal() {
+      await this.$hapticsImpact()
+      this.show = false
+      this.$eventBus.$emit('open-app-update-modal', this.latestRelease)
     },
     async openBuyMeACoffee() {
       await this.$hapticsImpact()
