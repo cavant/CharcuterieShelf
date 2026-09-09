@@ -30,9 +30,9 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 
 ### 🚀 Unified Local & Remote Server Switching
 - Configure a single server profile with both your **LAN Address** (`http://192.168.1.x:13378`) and **Remote Address** (`https://audio.example.com`).
-- Define a comma-separated list of your home **Wi-Fi SSIDs**.
-- When connected to your home network, the app automatically switches to local LAN speeds for instantaneous streaming and high-speed offline downloads.
-- When you step out the door, it smoothly transitions to remote streaming—all with uninterrupted session progress.
+- **Local-First Priority**: The app automatically defaults to your local LAN address first with a fast 1500ms reachability test, eliminating connection delays and bypassing Android 10+ Wi-Fi SSID access limitations.
+- **Smart VPN & Fallback**: Fast 800ms ping handles private LAN IPs over cellular VPNs. If the local network is unreachable, it smoothly falls back to the remote URL with zero user intervention.
+- **Lifecycle Auto-Switch**: Seamlessly re-probes and switches to LAN whenever returning to the app or reconnecting to network.
 
 <div align="center">
   <img alt="Smart Local and Remote Server Switcher" src="screenshots/01_server_connect.png" width="360px" />
@@ -50,8 +50,8 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 ### 📥 Pocket Casts OPML Import & Device Storage Integrity
 - **Pocket Casts OPML Import**: Directly import your podcast subscription lists exported from Pocket Casts (`.opml`, `.xml`, or text paste).
 - **Feed Preview & Filtering**: Live feed parsing, search filtering, and individual or bulk select/deselect checkboxes before importing.
-- **Folder & Auto-Download Configuration**: Choose your target server destination folder and toggle automatic episode downloads.
-- **Device-First Downloads with Server Metadata Sync**: Downloaded podcast episode audio files remain safely on your physical device for reliable offline listening, while episode titles, show notes, and playback progress seamlessly sync with your server.
+- **Device Storage Integrity**: Automatically prevents server-side audio downloads (`autoDownloadEpisodes: false`). Audio files are strictly stored on the device or direct-streamed, preserving host server storage.
+- **Device-First Downloads with Server Sync**: Downloaded podcast episodes remain safely on your physical device for reliable offline listening, while episode metadata, show notes, and listening progress seamlessly sync with your server.
 
 ---
 
@@ -69,9 +69,10 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 
 ### 🎙️ Pocket Casts-Inspired Podcatcher Power
 - **Per-User Podcast Siloing**: Each user maintains their own private podcast subscription list per server. When you log in, only your subscribed shows appear on your bookshelf and feeds—keeping podcast libraries fully personalized across different users sharing a single server.
+- **Device-Only Downloads & Direct Streaming**: Audio files download strictly to your phone or stream directly from podcast feed enclosures. The server's hard drive is never filled with media files, while playback progress and finished states sync to the server.
 - **1-Tap Pocket Casts Subscribe Toggle**: Subscribe or unsubscribe directly from any podcast detail screen with a single tap, matching Pocket Casts' iconic badge styling.
-- **Full RSS Feed Inline Browsing**: Automatically loads the entire podcast RSS catalog inline without opening separate modals. Episodes not yet cached on the server are displayed with duration and an instant 1-tap "Add to Server" cloud button.
-- **Three-Tier Smart Floating Sort**: Downloaded episodes automatically float to the top with section dividers, followed by on-server episodes ready for streaming, and finally feed-only episodes ready to be fetched.
+- **Full RSS Feed Inline Browsing**: Automatically loads the entire podcast RSS catalog inline without opening separate modals. Tap any episode row to instantly view show notes and full description.
+- **Downloaded-First Smart Floating Sort**: Downloaded episodes automatically float to the top of the episode list with a visual section divider, followed by all remaining episodes.
 - **Flexible Pocket Casts Episode Sorting**: Sort episodes Newest to Oldest, Oldest to Newest, Shortest to Longest (Duration), Longest to Shortest, Title A→Z, Title Z→A, Season, and Episode Number.
 - **Trim Silence**: Real-time silence skipping powered by ExoPlayer's native audio pipeline—no gaps, no pitch changes.
 - **Intro & Outro Skipping**: Set custom skip durations per podcast show (e.g. skip first 45s of intro ads, skip last 30s of credits).

@@ -764,20 +764,23 @@ export default {
       this.authMethods = []
 
       try {
-        console.log('[ServerConnectForm] submit tryServerUrl: ' + this.serverConfig.address)
-        // Try the server URL. If it fails and the protocol was not provided, try with http instead of https
+        console.log('[ServerConnectForm] submit connecting, target:', this.serverConfig.address, 'local:', this.serverConfig.localAddress)
         let statusData = null
-        try {
-          statusData = await this.tryServerUrl(this.serverConfig.address, !protocolProvided)
-        } catch (err) {
-          if (this.enableLocalConnection && this.serverConfig.localAddress) {
-            console.log('[ServerConnectForm] Remote server failed, attempting localAddress:', this.serverConfig.localAddress)
+
+        // If local connection is enabled and localAddress is provided, always test localAddress first!
+        if (this.enableLocalConnection && this.serverConfig.localAddress) {
+          console.log('[ServerConnectForm] Local connection enabled. Prioritizing localAddress first:', this.serverConfig.localAddress)
+          try {
             statusData = await this.tryServerUrl(this.serverConfig.localAddress, true)
             this.serverConfig.remoteAddress = this.serverConfig.address
             this.serverConfig.address = this.serverConfig.localAddress
-          } else {
-            throw err
+            console.log('[ServerConnectForm] Successfully reached local server at:', this.serverConfig.address)
+          } catch (localErr) {
+            console.log('[ServerConnectForm] Local address unreachable or failed, falling back to remote:', this.serverConfig.address, localErr)
+            statusData = await this.tryServerUrl(this.serverConfig.address, !protocolProvided)
           }
+        } else {
+          statusData = await this.tryServerUrl(this.serverConfig.address, !protocolProvided)
         }
 
         if (this.validateLoginFormResponse(statusData, this.serverConfig.address, protocolProvided)) {

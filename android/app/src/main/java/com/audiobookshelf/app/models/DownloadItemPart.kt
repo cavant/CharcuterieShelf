@@ -44,8 +44,12 @@ data class DownloadItemPart(
     fun make(downloadItemId:String, filename:String, fileSize: Long, destinationFile: File, finalDestinationFile: File, subfolder:String, serverPath:String, localFolder: LocalFolder, ebookFile: EBookFile?, audioTrack: AudioTrack?, episode: PodcastEpisode?) :DownloadItemPart {
       val destinationUri = Uri.fromFile(destinationFile)
       val finalDestinationUri = Uri.fromFile(finalDestinationFile)
-      val rawCover = if (serverPath.endsWith("/cover")) "?raw=1" else ""
-      val downloadUri = Uri.parse("${DeviceManager.serverAddress}${serverPath}$rawCover")
+      val downloadUri = if (serverPath.startsWith("http://") || serverPath.startsWith("https://")) {
+        Uri.parse(serverPath)
+      } else {
+        val rawCover = if (serverPath.endsWith("/cover")) "?raw=1" else ""
+        Uri.parse("${DeviceManager.serverAddress}${serverPath}$rawCover")
+      }
 
       Log.d("DownloadItemPart", "Audio File Destination Uri: $destinationUri | Final Destination Uri: $finalDestinationUri | Server Path $serverPath")
       return DownloadItemPart(

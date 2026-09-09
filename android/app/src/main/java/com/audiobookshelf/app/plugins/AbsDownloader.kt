@@ -119,7 +119,57 @@ class AbsDownloader : Plugin() {
               podcastEpisode.id == episodeId
             }
             if (episode == null) {
-              call.resolve(JSObject("{\"error\":\"Invalid podcast episode not found\"}"))
+              val enclosureUrl = call.getString("enclosureUrl") ?: ""
+              if (enclosureUrl.isNotEmpty()) {
+                val epTitle = call.getString("episodeTitle") ?: (if (episodeId.isNotEmpty()) episodeId else "Episode")
+                val epDuration = call.getDouble("episodeDuration") ?: 0.0
+                val epPubDate = call.getString("episodePubDate") ?: ""
+                val epPublishedAt = call.data.optLong("episodePublishedAt", System.currentTimeMillis())
+                val epDesc = call.getString("episodeDescription") ?: ""
+                val epSub = call.getString("episodeSubtitle") ?: ""
+                val epSeason = call.getString("episodeSeason") ?: ""
+                val epNum = call.getString("episodeNumber") ?: ""
+                val epType = call.getString("episodeType") ?: "full"
+                val mimeType = call.getString("mimeType") ?: "audio/mpeg"
+
+                val safeFilename = "${cleanStringForFileSystem(epTitle)}.mp3"
+                val fileMeta = FileMetadata(safeFilename, ".mp3", safeFilename, safeFilename, 0L)
+                val audioTrack = AudioTrack(
+                  index = 1,
+                  startOffset = 0.0,
+                  duration = epDuration,
+                  title = epTitle,
+                  contentUrl = enclosureUrl,
+                  mimeType = mimeType,
+                  metadata = fileMeta,
+                  isLocal = false,
+                  localFileId = null,
+                  serverIndex = null
+                )
+                val audioFile = AudioFile(1, "0", fileMeta)
+                val rssEpisode = PodcastEpisode(
+                  id = episodeId,
+                  index = 1,
+                  episode = epNum,
+                  episodeType = epType,
+                  title = epTitle,
+                  subtitle = epSub,
+                  description = epDesc,
+                  pubDate = epPubDate,
+                  publishedAt = epPublishedAt,
+                  audioFile = audioFile,
+                  audioTrack = audioTrack,
+                  chapters = null,
+                  duration = epDuration,
+                  size = null,
+                  serverEpisodeId = episodeId,
+                  localEpisodeId = null
+                )
+                startLibraryItemDownload(libraryItem, localFolder, rssEpisode)
+                call.resolve()
+              } else {
+                call.resolve(JSObject("{\"error\":\"Invalid podcast episode not found\"}"))
+              }
             } else {
               startLibraryItemDownload(libraryItem, localFolder, episode)
               call.resolve()
@@ -239,8 +289,12 @@ class AbsDownloader : Plugin() {
       val downloadItemId = "${libraryItem.id}-${episode?.id}"
       val downloadItem = DownloadItem(downloadItemId, libraryItem.id, episode?.id, libraryItem.userMediaProgress, DeviceManager.serverConnectionConfig?.id ?: "", DeviceManager.serverAddress, DeviceManager.serverUserId, libraryItem.mediaType, itemFolderPath, localFolder, podcastTitle, podcastTitle, libraryItem.media, mutableListOf())
 
-      var serverPath = "/api/items/${libraryItem.id}/file/${audioFileIno}/download"
-      var destinationFilename = getFilenameFromRelPath(audioTrack?.relPath ?: "")
+      val isDirectUrl = audioTrack?.contentUrl?.startsWith("http://") == true || audioTrack?.contentUrl?.startsWith("https://") == true
+      var serverPath = if (isDirectUrl) audioTrack!!.contentUrl else "/api/items/${libraryItem.id}/file/${audioFileIno}/download"
+      var destinationFilename = getFilenameFromRelPath(audioTrack?.relPath ?: "${cleanStringForFileSystem(episode?.title ?: "episode")}.mp3")
+      if (!destinationFilename.endsWith(".mp3") && !destinationFilename.endsWith(".m4a") && !destinationFilename.endsWith(".aac")) {
+        destinationFilename += ".mp3"
+      }
       Log.d(tag, "Audio File Server Path $serverPath | AF RelPath ${audioTrack?.relPath} | LocalFolder Path ${localFolder.absolutePath} | DestName $destinationFilename")
 
       var destinationFile = File("$tempFolderPath/$destinationFilename.part")

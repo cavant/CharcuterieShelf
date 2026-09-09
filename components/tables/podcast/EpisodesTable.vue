@@ -74,23 +74,17 @@
 
     <!-- Episode List with Section Dividers -->
     <template v-for="(episode, index) in episodesSorted">
-      <!-- Divider between downloaded and server sections -->
-      <div v-if="index === downloadedSectionEndIndex && downloadedSectionEndIndex > 0 && filterKey !== 'downloaded'" :key="'divider-dl-' + episode.id" class="flex items-center py-2 px-1 opacity-60">
+      <!-- Divider between downloaded and remaining episodes -->
+      <div v-if="index === downloadedSectionEndIndex && downloadedSectionEndIndex > 0 && downloadedSectionEndIndex < episodesSorted.length && filterKey !== 'downloaded'" :key="'divider-dl-' + (episode.id || episode._rssId)" class="flex items-center py-2 px-1 opacity-60">
         <div class="flex-grow border-t border-border/60" />
-        <span class="px-3 text-xs text-fg-muted font-medium uppercase tracking-wide">On Server</span>
-        <div class="flex-grow border-t border-border/60" />
-      </div>
-
-      <!-- Divider between server and RSS-only sections -->
-      <div v-if="index === rssSectionStartIndex && rssSectionStartIndex > 0 && rssSectionStartIndex < episodesSorted.length && filterKey !== 'downloaded'" :key="'divider-rss-' + episode.id" class="flex items-center py-2 px-1 opacity-60">
-        <div class="flex-grow border-t border-border/60" />
-        <span class="px-3 text-xs text-fg-muted font-medium uppercase tracking-wide">Feed Only</span>
+        <span class="px-3 text-xs text-fg-muted font-medium uppercase tracking-wide">All Episodes</span>
         <div class="flex-grow border-t border-border/60" />
       </div>
 
       <tables-podcast-episode-row
         :episode="episode"
-        :local-episode="localEpisodeMap[episode.id]"
+        :local-episode="localEpisodeMap[episode.id || episode._rssId]"
+        :library-item="libraryItem"
         :library-item-id="libraryItemId"
         :local-library-item-id="localLibraryItemId"
         :is-local="isLocal"
@@ -98,7 +92,6 @@
         :sort-key="sortKey"
         :key="episode.id || episode._rssId"
         @addToPlaylist="addEpisodeToPlaylist"
-        @downloadToServer="downloadEpisodeToServer"
       />
     </template>
 
@@ -287,12 +280,9 @@ export default {
           const matchesDescription = ep.description?.toLowerCase().includes(q)
           if (!matchesTitle && !matchesSubtitle && !matchesDescription) return false
         }
+        const epId = ep.id || ep._rssId
         if (this.filterKey === 'downloaded') {
-          return !!this.localEpisodeMap[ep.id]
-        }
-        // RSS-only episodes have no server progress — show them in 'all' and 'incomplete'
-        if (ep._rssOnly) {
-          return this.filterKey === 'all' || this.filterKey === 'incomplete'
+          return !!this.localEpisodeMap[epId]
         }
         var mediaProgress = this.getEpisodeProgress(ep)
         if (this.filterKey === 'incomplete') {
@@ -341,39 +331,26 @@ export default {
         return String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' })
       })
 
-      // Float downloaded episodes to the top, server episodes next, RSS-only at bottom (Pocket Casts style)
+      // Float downloaded episodes to the top (Pocket Casts style)
       if (this.filterKey !== 'downloaded') {
-        const downloaded = sorted.filter((ep) => !ep._rssOnly && !!this.localEpisodeMap[ep.id])
-        const onServer = sorted.filter((ep) => !ep._rssOnly && !this.localEpisodeMap[ep.id])
-        const rssOnly = sorted.filter((ep) => !!ep._rssOnly)
-        return [...downloaded, ...onServer, ...rssOnly]
+        const downloaded = sorted.filter((ep) => !!this.localEpisodeMap[ep.id || ep._rssId])
+        const notDownloaded = sorted.filter((ep) => !this.localEpisodeMap[ep.id || ep._rssId])
+        return [...downloaded, ...notDownloaded]
       }
       return sorted
     },
-    // Index in episodesSorted where downloaded episodes end and on-server begin
+    // Index in episodesSorted where downloaded episodes end and remaining begin
     downloadedSectionEndIndex() {
       const sorted = this.episodesSorted
       let count = 0
       for (const ep of sorted) {
-        if (!ep._rssOnly && this.localEpisodeMap[ep.id]) {
+        if (this.localEpisodeMap[ep.id || ep._rssId]) {
           count++
         } else {
           break
         }
       }
       return count
-    },
-    // Index in episodesSorted where RSS-only episodes begin
-    rssSectionStartIndex() {
-      const sorted = this.episodesSorted
-      let idx = sorted.length
-      for (let i = 0; i < sorted.length; i++) {
-        if (sorted[i]._rssOnly) {
-          idx = i
-          break
-        }
-      }
-      return idx
     },
     // Map of local episodes where server episode id is key
     localEpisodeMap() {
@@ -494,21 +471,6 @@ export default {
       this.podcastFeedEpisodes = podcastfeed.episodes
       this.showPodcastEpisodeFeed = true
     },
-    async downloadEpisodeToServer(rssEpisode) {
-      // Download an RSS-only episode to the server so it can be streamed
-      if (!rssEpisode?._rssEpisodeData) return
-
-      const episodeData = rssEpisode._rssEpisodeData
-      this.$toast.info(`Adding "${episodeData.title}" to server...`)
-
-      try {
-        await this.$nativeHttp.post(`/api/podcasts/${this.libraryItemId}/download-episodes`, [episodeData])
-        this.$toast.success('Episode download started on server')
-      } catch (error) {
-        console.error('Failed to download episode to server', error)
-        this.$toast.error('Failed to add episode to server')
-      }
-    },
     addEpisodeToPlaylist(episode) {
       this.$store.commit('globals/setSelectedPlaylistItems', [{ libraryItem: this.libraryItem, episode }])
       this.$store.commit('globals/setShowPlaylistsAddCreateModal', true)
@@ -524,9 +486,17 @@ export default {
       this.showSortModal = true
     },
     getEpisodeProgress(episode) {
-      if (!episode.id) return null // RSS-only episodes have no progress
-      if (this.isLocal) return this.$store.getters['globals/getLocalMediaProgressById'](this.libraryItemId, episode.id)
-      return this.$store.getters['user/getUserMediaProgress'](this.libraryItemId, episode.id)
+      const epId = episode.id || episode._rssId
+      if (this.isLocal) return this.$store.getters['globals/getLocalMediaProgressById'](this.libraryItemId, epId)
+      const localEp = this.localEpisodeMap[epId]
+      if (localEp && this.localLibraryItemId) {
+        const localProg = this.$store.getters['globals/getLocalMediaProgressById'](this.localLibraryItemId, localEp.id)
+        if (localProg) return localProg
+      }
+      if (episode.id) {
+        return this.$store.getters['user/getUserMediaProgress'](this.libraryItemId, episode.id)
+      }
+      return null
     },
     init() {
       this.episodesCopy = this.episodes.map((ep) => {

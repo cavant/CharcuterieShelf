@@ -194,13 +194,12 @@
             <span class="text-fg font-mono truncate max-w-[240px]">{{ folderOptions[0].fullPath }}</span>
           </div>
 
-          <!-- Auto Download Toggle -->
           <div class="flex items-center justify-between pt-1">
             <div>
-              <p class="font-semibold text-fg">Auto Download Episodes</p>
-              <p class="text-xxs text-fg-muted">Download new episodes automatically when published</p>
+              <p class="font-semibold text-fg">Device-Only Storage</p>
+              <p class="text-xxs text-fg-muted">Episodes stream or download to device storage only; server disk is untouched</p>
             </div>
-            <ui-toggle-switch v-model="autoDownloadEpisodes" />
+            <span class="material-symbols text-success text-lg">smartphone</span>
           </div>
         </div>
 
@@ -463,7 +462,7 @@ export default {
           feeds: this.selectedFeeds.map(f => f.feedUrl),
           folderId: this.selectedFolderId,
           libraryId: this.targetLibrary.id,
-          autoDownloadEpisodes: this.autoDownloadEpisodes
+          autoDownloadEpisodes: false
         }
 
         await this.$nativeHttp.post('/api/podcasts/opml/create', payload)

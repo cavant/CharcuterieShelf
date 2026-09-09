@@ -189,6 +189,9 @@ class PlaybackSession(
 
     if (coverPath == null)
             return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
+    if (coverPath?.startsWith("http:") == true || coverPath?.startsWith("https:") == true) {
+      return Uri.parse(coverPath)
+    }
 
     // As of v2.17.0 token is not needed with cover image requests
     if (checkIsServerVersionGte("2.17.0")) {
@@ -200,6 +203,9 @@ class PlaybackSession(
   @JsonIgnore
   fun getContentUri(audioTrack: AudioTrack): Uri {
     if (isLocal) return Uri.parse(audioTrack.contentUrl) // Local content url
+    if (audioTrack.contentUrl.startsWith("http://") || audioTrack.contentUrl.startsWith("https://")) {
+      return Uri.parse(audioTrack.contentUrl)
+    }
     // As of v2.22.0 tracks use a different endpoint
     // See: https://github.com/advplyr/audiobookshelf/pull/4263
     if (checkIsServerVersionGte("2.22.0")) {

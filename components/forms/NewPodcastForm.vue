@@ -17,7 +17,10 @@
     <ui-text-input-with-label v-model="fullPath" :label="$strings.LabelPath" input-class="h-10" readonly class="mb-2 text-sm" />
 
     <div class="flex items-center py-4 px-2">
-      <ui-checkbox v-model="podcast.autoDownloadEpisodes" :label="$strings.LabelAutoDownloadEpisodes" checkbox-bg="primary" border-color="gray-600" label-class="pl-2 text-sm font-semibold" />
+      <div class="flex items-center space-x-1.5 text-xs text-fg-muted">
+        <span class="material-symbols text-success text-base">smartphone</span>
+        <span>Device-only download & stream</span>
+      </div>
       <div class="flex-grow" />
       <ui-btn color="success" @click="submit">{{ $strings.ButtonSubmit }}</ui-btn>
     </div>
@@ -134,7 +137,7 @@ export default {
             itunesArtistId: this.podcast.itunesArtistId,
             language: this.podcast.language
           },
-          autoDownloadEpisodes: this.podcast.autoDownloadEpisodes
+          autoDownloadEpisodes: false
         }
       }
       console.log('Podcast payload', podcastPayload)

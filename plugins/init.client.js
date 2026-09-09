@@ -355,6 +355,13 @@ export default ({ store, app }, inject) => {
   App.addListener('appUrlOpen', (data) => {
     eventBus.$emit('url-open', data.url)
   })
+
+  App.addListener('appStateChange', ({ isActive }) => {
+    if (isActive) {
+      console.log('[init.client] App became active, checking server network switch...')
+      store.dispatch('checkServerNetworkSwitch')
+    }
+  })
 }
 
 export { encode, decode }

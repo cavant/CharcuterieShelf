@@ -254,6 +254,13 @@ export default {
       console.log('Called playLibraryItem', libraryItemId)
       const preparePayload = { libraryItemId, episodeId, playWhenReady: startWhenReady, playbackRate }
       if (startTime !== undefined && startTime !== null) preparePayload.startTime = startTime
+      if (payload.streamUrl) {
+        preparePayload.streamUrl = payload.streamUrl
+        preparePayload.title = payload.title || ''
+        preparePayload.author = payload.author || ''
+        preparePayload.duration = payload.duration || 0
+        preparePayload.coverUrl = payload.coverUrl || ''
+      }
       AbsAudioPlayer.prepareLibraryItem(preparePayload)
         .then((data) => {
           if (data.error) {

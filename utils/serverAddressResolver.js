@@ -198,40 +198,42 @@ export class ServerAddressResolver {
 
     const networkInfo = await this.getCurrentNetworkInfo()
 
-    // If we're on cellular and local address is private LAN IP, don't attempt LAN
+    // Evaluate local address reachability
+    // On Wi-Fi or when local address is provided, always test local address first
+    const isPureCellular = networkInfo.connectionType === 'cellular' && !networkInfo.isWifi
+    let shouldTestLocal = true
+
     try {
       const localUrlObj = new URL(localUrl)
-      if (networkInfo.connectionType === 'cellular' && isPrivateNetwork(localUrlObj.hostname)) {
-        return { activeAddress: remoteUrl, isLocal: false, reason: 'cellular_private_ip' }
+      if (isPureCellular && isPrivateNetwork(localUrlObj.hostname) && !options.forcePing) {
+        // On cellular without explicit forcePing, private IP won't resolve unless on VPN
+        // Test with a short 800ms timeout to support VPNs without delaying connection
+        console.log(`[ServerAddressResolver] Cellular connection detected with private LAN IP (${localUrlObj.hostname}), checking VPN/connectivity with fast 800ms ping...`)
+        const reachableOverVpn = await this.pingAddress(localUrl, config.customHeaders, 800)
+        if (reachableOverVpn) {
+          console.log(`[ServerAddressResolver] Local address reachable over VPN (${localUrl}). Using LAN connection!`)
+          return { activeAddress: localUrl, isLocal: true, reason: 'local_reachable_vpn' }
+        }
+        shouldTestLocal = false
       }
     } catch (e) {
-      // Invalid local URL format
+      console.warn('[ServerAddressResolver] Invalid local URL format:', localUrl)
       return { activeAddress: remoteUrl, isLocal: false, reason: 'invalid_local_url' }
     }
 
-    // Check if Wi-Fi SSID matches configured local networks
-    const hasLocalNetworks = !!config.localNetworks?.trim()
-    let isMatched = false
-
-    if (hasLocalNetworks) {
-      isMatched = matchesLocalNetworks(config.localNetworks, networkInfo)
-    } else if (options.forcePing) {
-      isMatched = true
-    }
-
-    if (isMatched) {
-      console.log(`[ServerAddressResolver] Local Wi-Fi SSID matched (${networkInfo.ssid}), pinging local address ${localUrl}...`)
+    if (shouldTestLocal) {
+      console.log(`[ServerAddressResolver] Prioritizing local address ${localUrl}, pinging with 1500ms timeout... (SSID: ${networkInfo.ssid || 'unknown'})`)
       const reachable = await this.pingAddress(localUrl, config.customHeaders, 1500)
       if (reachable) {
-        console.log(`[ServerAddressResolver] Local address ${localUrl} reachable. Using LAN connection!`)
+        console.log(`[ServerAddressResolver] Local address ${localUrl} responded successfully! Using local LAN connection.`)
         return { activeAddress: localUrl, isLocal: true, reason: 'local_reachable' }
       } else {
-        console.warn(`[ServerAddressResolver] Local address ${localUrl} ping failed. Falling back to remote ${remoteUrl}.`)
+        console.log(`[ServerAddressResolver] Local address ${localUrl} ping failed or timed out. Falling back to remote ${remoteUrl}.`)
         return { activeAddress: remoteUrl, isLocal: false, reason: 'local_ping_failed' }
       }
     }
 
-    console.log(`[ServerAddressResolver] Wi-Fi (${networkInfo.ssid || 'None'}) does not match allowed local SSIDs (${config.localNetworks}). Using remote address ${remoteUrl}.`)
-    return { activeAddress: remoteUrl, isLocal: false, reason: 'network_not_matched' }
+    console.log(`[ServerAddressResolver] Skipping local ping on cellular. Using remote address ${remoteUrl}.`)
+    return { activeAddress: remoteUrl, isLocal: false, reason: 'cellular_fallback' }
   }
 }

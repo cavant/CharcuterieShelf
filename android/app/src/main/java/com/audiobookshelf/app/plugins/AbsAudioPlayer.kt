@@ -10,6 +10,7 @@ import com.audiobookshelf.app.media.MediaEventManager
 import com.audiobookshelf.app.player.CastManager
 import com.audiobookshelf.app.player.PlayerListener
 import com.audiobookshelf.app.player.PlayerNotificationService
+import com.audiobookshelf.app.player.PLAYMETHOD_DIRECTSTREAM
 import com.audiobookshelf.app.server.ApiHandler
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -216,6 +217,65 @@ class AbsAudioPlayer : Plugin() {
     if (libraryItemId.isEmpty()) {
       Log.e(tag, "Invalid call to play library item no library item id")
       return call.resolve(JSObject("{\"error\":\"Invalid request\"}"))
+    }
+
+    val streamUrl = call.getString("streamUrl") ?: ""
+    if (streamUrl.isNotEmpty()) {
+      val title = call.getString("title") ?: (if (episodeId.isNotEmpty()) episodeId else "Episode")
+      val author = call.getString("author") ?: ""
+      val duration = call.getDouble("duration") ?: 0.0
+      val coverUrl = call.getString("coverUrl") ?: ""
+
+      val safeFilename = "${title.replace(Regex("[?:\"*|/\\\\<>]"), "")}.mp3"
+      val fileMeta = FileMetadata(safeFilename, ".mp3", safeFilename, safeFilename, 0L)
+      val audioTrack = AudioTrack(
+        index = 1,
+        startOffset = 0.0,
+        duration = duration,
+        title = title,
+        contentUrl = streamUrl,
+        mimeType = "audio/mpeg",
+        metadata = fileMeta,
+        isLocal = false,
+        localFileId = null,
+        serverIndex = null
+      )
+      val sessionId = if (episodeId.isNotEmpty()) "${libraryItemId}-${episodeId}" else DeviceManager.getBase64Id(streamUrl)
+      val pMeta = PodcastMetadata(title, author, null, mutableListOf(), false)
+      val session = PlaybackSession(
+        sessionId,
+        DeviceManager.serverUserId,
+        libraryItemId,
+        episodeId,
+        "podcast",
+        pMeta,
+        playerNotificationService.getDeviceInfo(),
+        mutableListOf(),
+        title,
+        author,
+        if (coverUrl.isNotEmpty()) coverUrl else null,
+        duration,
+        PLAYMETHOD_DIRECTSTREAM,
+        System.currentTimeMillis(),
+        System.currentTimeMillis(),
+        0L,
+        mutableListOf(audioTrack),
+        startTimeOverride ?: 0.0,
+        null,
+        null,
+        null,
+        DeviceManager.serverConnectionConfigId,
+        DeviceManager.serverAddress,
+        "exo-player"
+      )
+
+      Handler(Looper.getMainLooper()).post {
+        playerNotificationService.mediaProgressSyncer.stop {
+          PlayerListener.lazyIsPlaying = false
+          playerNotificationService.preparePlayer(session, playWhenReady, playbackRate)
+        }
+      }
+      return call.resolve(JSObject(jacksonMapper.writeValueAsString(session)))
     }
 
     if (libraryItemId.startsWith("local")) { // Play local media item

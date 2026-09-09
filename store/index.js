@@ -104,7 +104,7 @@ export const getters = {
 
 export const actions = {
   // Listen for network connection
-  async setupNetworkListener({ state, commit }) {
+  async setupNetworkListener({ state, commit, dispatch }) {
     if (state.isNetworkListenerInit) return
     commit('setNetworkListenerInit', true)
 
