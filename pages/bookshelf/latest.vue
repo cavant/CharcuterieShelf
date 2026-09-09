@@ -68,9 +68,17 @@ export default {
         return null
       })
       this.processing = false
-      console.log('Episodes', episodePayload)
-      this.recentEpisodes = episodePayload.episodes || []
-      this.totalEpisodes = episodePayload.total
+      let episodes = episodePayload.episodes || []
+      const userId = this.$store.state.user.user?.id
+      const serverAddress = this.$store.getters['user/getServerAddress']
+      if (userId && serverAddress) {
+        const subs = await this.$localStore.getUserPodcastSubscriptions(userId, serverAddress)
+        if (subs && Array.isArray(subs)) {
+          episodes = episodes.filter((ep) => subs.includes(ep.libraryItemId))
+        }
+      }
+      this.recentEpisodes = episodes
+      this.totalEpisodes = episodes.length
       this.currentPage = page
     },
     libraryChanged(libraryId) {
@@ -102,10 +110,12 @@ export default {
     this.loadLocalPodcastLibraryItems()
     this.$eventBus.$on('library-changed', this.libraryChanged)
     this.$eventBus.$on('new-local-library-item', this.newLocalLibraryItem)
+    this.$eventBus.$on('podcast-subscription-changed', () => this.loadRecentEpisodes(0))
   },
   beforeDestroy() {
     this.$eventBus.$off('library-changed', this.libraryChanged)
     this.$eventBus.$off('new-local-library-item', this.newLocalLibraryItem)
+    this.$eventBus.$off('podcast-subscription-changed', () => this.loadRecentEpisodes(0))
   }
 }
 </script>

@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full py-4 overflow-hidden relative border-b border-white border-opacity-10" @click.stop="goToEpisodePage">
+  <div class="w-full py-4 overflow-hidden relative border-b border-white border-opacity-10" :class="{ 'opacity-60': isRssOnly }" @click.stop="isRssOnly ? $emit('downloadToServer', episode) : goToEpisodePage()">
     <div v-if="episode" class="w-full px-1">
       <!-- Help debug for testing -->
       <!-- <template>
@@ -29,36 +29,51 @@
       </div>
 
       <div class="flex items-center pt-2">
-        <!-- Play/Pause Button -->
-        <div class="h-10 px-4 border border-border rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-white text-opacity-40' : ''" @click.stop="playClick">
-          <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill leading-none" :class="streamIsPlaying ? '' : 'text-success'">
-            {{ streamIsPlaying ? 'pause' : 'play_arrow' }}
-          </span>
-          <svg v-else class="animate-spin" style="width: 28px; height: 28px" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-          </svg>
-          <p class="pl-2 pr-1 text-sm font-semibold">{{ timeRemaining }}</p>
-        </div>
+        <template v-if="isRssOnly">
+          <!-- RSS-Only: Add to Server Button -->
+          <div class="h-10 px-4 border border-border rounded-full flex items-center justify-center cursor-pointer text-fg-muted hover:text-accent" @click.stop="$emit('downloadToServer', episode)">
+            <span class="material-symbols text-2xl leading-none">cloud_download</span>
+            <p class="pl-2 pr-1 text-sm font-semibold">Add to Server</p>
+          </div>
 
-        <!-- Read Status Button -->
-        <ui-read-icon-btn :disabled="isProcessingReadUpdate" :is-read="userIsFinished" borderless class="mx-1" @click="toggleFinished" />
+          <!-- Duration display for RSS-only -->
+          <p v-if="episode.duration" class="pl-3 text-xs text-fg-muted">{{ $elapsedPretty(episode.duration) }}</p>
 
-        <!-- Add to Playlist Button -->
-        <button v-if="!isLocal" class="mx-1.5" @click.stop="addToPlaylist">
-          <span class="material-symbols text-2xl leading-none">playlist_add</span>
-        </button>
+          <!-- Spacer to push elements left -->
+          <div class="flex-grow" />
+        </template>
+        <template v-else>
+          <!-- Play/Pause Button -->
+          <div class="h-10 px-4 border border-border rounded-full flex items-center justify-center cursor-pointer" :class="userIsFinished ? 'text-white text-opacity-40' : ''" @click.stop="playClick">
+            <span v-if="!playerIsStartingForThisMedia" class="material-symbols text-2xl fill leading-none" :class="streamIsPlaying ? '' : 'text-success'">
+              {{ streamIsPlaying ? 'pause' : 'play_arrow' }}
+            </span>
+            <svg v-else class="animate-spin" style="width: 28px; height: 28px" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+            </svg>
+            <p class="pl-2 pr-1 text-sm font-semibold">{{ timeRemaining }}</p>
+          </div>
 
-        <!-- Download Section -->
-        <div v-if="userCanDownload" class="flex items-center">
-          <span v-if="isLocal" class="material-symbols px-2 text-success text-2xl leading-none">audio_file</span>
-          <span v-else-if="!localEpisode" class="material-symbols mx-1.5 text-2xl leading-none" :class="downloadItem || startingDownload ? 'animate-bounce text-warning text-opacity-75' : ''" @click.stop="downloadClick">
-            {{ downloadItem || startingDownload ? 'downloading' : 'download' }}
-          </span>
-          <span v-else class="material-symbols px-2 text-success text-2xl leading-none">download_done</span>
-        </div>
+          <!-- Read Status Button -->
+          <ui-read-icon-btn :disabled="isProcessingReadUpdate" :is-read="userIsFinished" borderless class="mx-1" @click="toggleFinished" />
 
-        <!-- Spacer to push elements left -->
-        <div class="flex-grow" />
+          <!-- Add to Playlist Button -->
+          <button v-if="!isLocal" class="mx-1.5" @click.stop="addToPlaylist">
+            <span class="material-symbols text-2xl leading-none">playlist_add</span>
+          </button>
+
+          <!-- Download Section -->
+          <div v-if="userCanDownload" class="flex items-center">
+            <span v-if="isLocal" class="material-symbols px-2 text-success text-2xl leading-none">audio_file</span>
+            <span v-else-if="!localEpisode" class="material-symbols mx-1.5 text-2xl leading-none" :class="downloadItem || startingDownload ? 'animate-bounce text-warning text-opacity-75' : ''" @click.stop="downloadClick">
+              {{ downloadItem || startingDownload ? 'downloading' : 'download' }}
+            </span>
+            <span v-else class="material-symbols px-2 text-success text-2xl leading-none">download_done</span>
+          </div>
+
+          <!-- Spacer to push elements left -->
+          <div class="flex-grow" />
+        </template>
       </div>
     </div>
 
@@ -87,6 +102,7 @@ export default {
       default: () => {}
     },
     isLocal: Boolean,
+    isRssOnly: Boolean,
     sortKey: String
   },
   mixins: [cellularPermissionHelpers],

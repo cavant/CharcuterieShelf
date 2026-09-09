@@ -473,6 +473,26 @@ export default {
         // Notify app and refresh library
         this.$eventBus.$emit('podcast-added')
         this.$eventBus.$emit('library-changed', this.targetLibrary.id)
+
+        // Automatically add imported podcasts to user subscriptions
+        const userId = this.$store.state.user.user?.id
+        const serverAddress = this.$store.getters['user/getServerAddress']
+        if (userId && serverAddress) {
+          setTimeout(async () => {
+            try {
+              const res = await this.$nativeHttp.get(`/api/libraries/${this.targetLibrary.id}/items?limit=1000`)
+              if (res && res.results) {
+                const allIds = res.results.map((r) => r.id)
+                const currentSubs = (await this.$localStore.getUserPodcastSubscriptions(userId, serverAddress)) || []
+                const mergedSubs = Array.from(new Set([...currentSubs, ...allIds]))
+                await this.$localStore.setUserPodcastSubscriptions(userId, serverAddress, mergedSubs)
+                this.$eventBus.$emit('podcast-subscription-changed')
+              }
+            } catch (e) {
+              console.error('Failed to sync subscriptions after OPML import', e)
+            }
+          }, 3000)
+        }
       } catch (err) {
         console.error('Failed to import OPML feeds:', err)
         this.$toast.error(err?.message || 'Failed to create podcasts on server')

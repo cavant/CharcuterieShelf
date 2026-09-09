@@ -176,9 +176,11 @@ export default {
         this.currentSFQueryString = this.buildSearchParams()
       }
 
+      const isPodcastLibrary = this.currentLibraryMediaType === 'podcast'
+      const limit = isPodcastLibrary ? 1000 : this.booksPerFetch
       const entityPath = this.entityName === 'books' || this.entityName === 'series-books' ? `items` : this.entityName
       const sfQueryString = this.currentSFQueryString ? this.currentSFQueryString + '&' : ''
-      const fullQueryString = `?${sfQueryString}limit=${this.booksPerFetch}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
+      const fullQueryString = `?${sfQueryString}limit=${limit}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
 
       const payload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/${entityPath}${fullQueryString}`).catch((error) => {
         console.error('failed to fetch books', error)
@@ -193,17 +195,32 @@ export default {
       }
       if (payload && payload.results) {
         console.log('Received payload', payload)
+        let results = payload.results
+        let total = payload.total
+
+        if (isPodcastLibrary && this.user?.id) {
+          const serverAddress = this.$store.getters['user/getServerAddress']
+          let subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, serverAddress)
+          if (subs === null) {
+            // Auto-initialize with current library podcasts on first visit
+            subs = results.map((r) => r.id)
+            await this.$localStore.setUserPodcastSubscriptions(this.user.id, serverAddress, subs)
+          }
+          results = results.filter((r) => subs.includes(r.id))
+          total = results.length
+        }
+
         if (!this.initialized) {
           this.initialized = true
-          this.totalEntities = payload.total
+          this.totalEntities = total
           this.totalShelves = Math.ceil(this.totalEntities / this.entitiesPerShelf)
           this.entities = new Array(this.totalEntities)
           this.$eventBus.$emit('bookshelf-total-entities', this.totalEntities)
         }
 
-        for (let i = 0; i < payload.results.length; i++) {
-          const index = i + startIndex
-          this.entities[index] = payload.results[i]
+        for (let i = 0; i < results.length; i++) {
+          const index = isPodcastLibrary ? i : i + startIndex
+          this.entities[index] = results[i]
           if (this.entityComponentRefs[index]) {
             this.entityComponentRefs[index].setEntity(this.entities[index])
 
@@ -504,6 +521,7 @@ export default {
 
       this.$eventBus.$on('library-changed', this.libraryChanged)
       this.$eventBus.$on('user-settings', this.settingsUpdated)
+      this.$eventBus.$on('podcast-subscription-changed', this.resetEntities)
 
       this.$socket.$on('item_updated', this.libraryItemUpdated)
       this.$socket.$on('item_added', this.libraryItemAdded)
@@ -526,6 +544,7 @@ export default {
 
       this.$eventBus.$off('library-changed', this.libraryChanged)
       this.$eventBus.$off('user-settings', this.settingsUpdated)
+      this.$eventBus.$off('podcast-subscription-changed', this.resetEntities)
 
       this.$socket.$off('item_updated', this.libraryItemUpdated)
       this.$socket.$off('item_added', this.libraryItemAdded)

@@ -179,6 +179,53 @@ class LocalStorage {
       return null
     }
   }
+
+  // ── Per-User Podcast Subscription Management ──────────────────────────
+  // Each user on each server has their own independent podcast subscription list.
+  // Key format: podcast_subs_<serverAddress>_<userId>
+  // Value: JSON array of library item IDs (strings)
+
+  _subKey(userId, serverAddress) {
+    // Normalize server address to avoid duplicates from trailing slashes etc.
+    const addr = (serverAddress || '').replace(/\/+$/, '').toLowerCase()
+    return `podcast_subs_${addr}_${userId}`
+  }
+
+  async getUserPodcastSubscriptions(userId, serverAddress) {
+    if (!userId || !serverAddress) return null
+    try {
+      const obj = await Preferences.get({ key: this._subKey(userId, serverAddress) }) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get podcast subscriptions', error)
+      return null
+    }
+  }
+
+  async setUserPodcastSubscriptions(userId, serverAddress, itemIds) {
+    if (!userId || !serverAddress) return
+    try {
+      await Preferences.set({ key: this._subKey(userId, serverAddress), value: JSON.stringify(itemIds || []) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set podcast subscriptions', error)
+    }
+  }
+
+  async addUserPodcastSubscription(userId, serverAddress, itemId) {
+    if (!userId || !serverAddress || !itemId) return
+    const subs = (await this.getUserPodcastSubscriptions(userId, serverAddress)) || []
+    if (!subs.includes(itemId)) {
+      subs.push(itemId)
+      await this.setUserPodcastSubscriptions(userId, serverAddress, subs)
+    }
+  }
+
+  async removeUserPodcastSubscription(userId, serverAddress, itemId) {
+    if (!userId || !serverAddress || !itemId) return
+    const subs = (await this.getUserPodcastSubscriptions(userId, serverAddress)) || []
+    const filtered = subs.filter(id => id !== itemId)
+    await this.setUserPodcastSubscriptions(userId, serverAddress, filtered)
+  }
 }
 
 

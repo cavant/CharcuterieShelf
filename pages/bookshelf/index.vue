@@ -256,6 +256,11 @@ export default {
           return
         }
 
+        let subs = null
+        if (this.currentLibraryIsPodcast && this.user?.id && this.$store.getters['user/getServerAddress']) {
+          subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.$store.getters['user/getServerAddress'])
+        }
+
         this.shelves = categories.map((cat) => {
           if (cat.type == 'book' || cat.type == 'podcast' || cat.type == 'episode') {
             // Map localLibraryItem to entities
@@ -268,9 +273,17 @@ export default {
               }
               return entity
             })
+
+            // Filter by user subscriptions if podcast
+            if (subs && Array.isArray(subs)) {
+              cat.entities = cat.entities.filter((entity) => {
+                const id = entity.id || entity.libraryItemId
+                return subs.includes(id)
+              })
+            }
           }
           return cat
-        })
+        }).filter((cat) => cat.entities && cat.entities.length)
 
         // Only add the local shelf with the same media type
         const localShelves = localCategories.filter((cat) => cat.type === this.currentLibraryMediaType && !cat.localOnly)
@@ -328,9 +341,11 @@ export default {
     },
     initListeners() {
       this.$eventBus.$on('library-changed', this.libraryChanged)
+      this.$eventBus.$on('podcast-subscription-changed', this.fetchCategories)
     },
     removeListeners() {
       this.$eventBus.$off('library-changed', this.libraryChanged)
+      this.$eventBus.$off('podcast-subscription-changed', this.fetchCategories)
     }
   },
   async mounted() {

@@ -62,6 +62,11 @@
             <ui-btn v-if="showDownload" :color="downloadItem ? 'warning' : 'primary'" class="flex items-center justify-center mx-1" :padding-x="2" @click="downloadClick">
               <span class="material-symbols text-2xl" :class="downloadItem || startingDownload ? 'animate-pulse' : ''">{{ downloadItem || startingDownload ? 'downloading' : 'download' }}</span>
             </ui-btn>
+            <!-- Pocket Casts Style Podcast Subscribe/Unsubscribe Toggle -->
+            <ui-btn v-if="isPodcast" :color="isSubscribed ? 'success' : 'primary'" class="flex items-center justify-center mx-1" :padding-x="3" :title="isSubscribed ? 'Subscribed' : 'Subscribe'" @click="togglePodcastSubscription">
+              <span class="material-symbols text-2xl" :class="isSubscribed ? 'fill text-white' : 'text-fg-muted'">{{ isSubscribed ? 'check_circle' : 'add_circle' }}</span>
+              <span class="px-1 text-xs font-semibold">{{ isSubscribed ? 'Subscribed' : 'Subscribe' }}</span>
+            </ui-btn>
             <ui-btn v-if="canEdit" color="primary" class="flex items-center justify-center mx-1" :padding-x="2" :title="$strings.HeaderEditItem" @click="editButtonPress">
               <span class="material-symbols text-2xl">edit</span>
             </ui-btn>
@@ -228,7 +233,8 @@ export default {
       episodeStartingPlayback: null,
       startingDownload: false,
       showEditModal: false,
-      editModalTab: 'details'
+      editModalTab: 'details',
+      isSubscribed: true
     }
   },
   mixins: [cellularPermissionHelpers],
@@ -758,6 +764,29 @@ export default {
         this.rssFeed = null
       }
     },
+    async checkSubscriptionStatus() {
+      if (!this.isPodcast || !this.user?.id || !this.currentServerAddress) return
+      const subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.currentServerAddress)
+      if (subs === null) {
+        this.isSubscribed = true
+      } else {
+        this.isSubscribed = subs.includes(this.libraryItemId)
+      }
+    },
+    async togglePodcastSubscription() {
+      if (!this.user?.id || !this.currentServerAddress || !this.libraryItemId) return
+      await this.$hapticsImpact()
+      if (this.isSubscribed) {
+        await this.$localStore.removeUserPodcastSubscription(this.user.id, this.currentServerAddress, this.libraryItemId)
+        this.isSubscribed = false
+        this.$toast.info(`Unsubscribed from "${this.title}"`)
+      } else {
+        await this.$localStore.addUserPodcastSubscription(this.user.id, this.currentServerAddress, this.libraryItemId)
+        this.isSubscribed = true
+        this.$toast.success(`Subscribed to "${this.title}"`)
+      }
+      this.$eventBus.$emit('podcast-subscription-changed')
+    },
     async setLibrary() {
       if (!this.libraryItem.libraryId) return
       await this.$store.dispatch('libraries/fetch', this.libraryItem.libraryId)
@@ -776,6 +805,12 @@ export default {
       this.$socket.$on('item_updated', this.itemUpdated)
       this.$socket.$on('rss_feed_open', this.rssFeedOpen)
       this.$socket.$on('rss_feed_closed', this.rssFeedClosed)
+
+      if (this.isPodcast) {
+        this.checkSubscriptionStatus()
+        this.$eventBus.$on('podcast-subscription-changed', this.checkSubscriptionStatus)
+      }
+
       this.checkDescriptionClamped()
 
       // Set height of page below cover image
@@ -823,6 +858,7 @@ export default {
     this.$socket.$off('item_updated', this.itemUpdated)
     this.$socket.$off('rss_feed_open', this.rssFeedOpen)
     this.$socket.$off('rss_feed_closed', this.rssFeedClosed)
+    this.$eventBus.$off('podcast-subscription-changed', this.checkSubscriptionStatus)
 
     // Set scroll position
     if (window['item-page']) {

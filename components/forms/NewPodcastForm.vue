@@ -142,8 +142,14 @@ export default {
       this._processing = true
       this.$nativeHttp
         .post('/api/podcasts', podcastPayload)
-        .then((libraryItem) => {
+        .then(async (libraryItem) => {
           this._processing = false
+          const userId = this.$store.state.user.user?.id
+          const serverAddress = this.$store.getters['user/getServerAddress']
+          if (userId && serverAddress && libraryItem?.id) {
+            await this.$localStore.addUserPodcastSubscription(userId, serverAddress, libraryItem.id)
+            this.$eventBus.$emit('podcast-subscription-changed')
+          }
           this.$toast.success(this.$strings.ToastPodcastCreateSuccess)
           this.$router.push(`/item/${libraryItem.id}`)
         })

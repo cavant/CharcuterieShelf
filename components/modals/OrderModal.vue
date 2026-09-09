@@ -125,6 +125,10 @@ export default {
           value: 'title'
         },
         {
+          text: this.$strings.LabelDuration || 'Duration',
+          value: 'duration'
+        },
+        {
           text: this.$strings.LabelSeason,
           value: 'season'
         },

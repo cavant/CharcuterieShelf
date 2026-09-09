@@ -1,5 +1,5 @@
 {
-  "appId": "com.charcuterieshelf.app",
+  "appId": "com.charcuterieshelf",
   "appName": "CharcuterieShelf",
   "webDir": "dist",
   "plugins": {

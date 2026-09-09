@@ -68,8 +68,11 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 ---
 
 ### 🎙️ Pocket Casts-Inspired Podcatcher Power
-- **Full Episode Browsing**: View the complete list of all episodes for any podcast (fetched from server), not just downloaded ones—browse, discover, and queue new content without opening a browser.
-- **Downloaded-First Smart Sorting**: Downloaded episodes automatically float to the top of the list with a clear section divider, so your offline-ready content is always at your fingertips.
+- **Per-User Podcast Siloing**: Each user maintains their own private podcast subscription list per server. When you log in, only your subscribed shows appear on your bookshelf and feeds—keeping podcast libraries fully personalized across different users sharing a single server.
+- **1-Tap Pocket Casts Subscribe Toggle**: Subscribe or unsubscribe directly from any podcast detail screen with a single tap, matching Pocket Casts' iconic badge styling.
+- **Full RSS Feed Inline Browsing**: Automatically loads the entire podcast RSS catalog inline without opening separate modals. Episodes not yet cached on the server are displayed with duration and an instant 1-tap "Add to Server" cloud button.
+- **Three-Tier Smart Floating Sort**: Downloaded episodes automatically float to the top with section dividers, followed by on-server episodes ready for streaming, and finally feed-only episodes ready to be fetched.
+- **Flexible Pocket Casts Episode Sorting**: Sort episodes Newest to Oldest, Oldest to Newest, Shortest to Longest (Duration), Longest to Shortest, Title A→Z, Title Z→A, Season, and Episode Number.
 - **Trim Silence**: Real-time silence skipping powered by ExoPlayer's native audio pipeline—no gaps, no pitch changes.
 - **Intro & Outro Skipping**: Set custom skip durations per podcast show (e.g. skip first 45s of intro ads, skip last 30s of credits).
 - **Per-Show Playback Speeds**: Automatically remembers your preferred listening speed for each podcast independently.
@@ -150,7 +153,7 @@ CharcuterieShelf is 100% free and open source with zero paywalls. If you enjoy u
 - [Node.js](https://nodejs.org/) (v20 LTS recommended)
 - [Git](https://git-scm.com/)
 - [Java JDK 21](https://adoptium.net/)
-- [Android Studio & SDK](https://developer.android.com/studio) (API 34+)
+- [Android Studio & SDK](https://developer.android.com/studio) (API 36+)
 
 ### 1. Clone the Repository
 ```bash
@@ -179,7 +182,7 @@ cd android
 .\gradlew.bat assembleDebug
 # Output: android/app/build/outputs/apk/debug/app-debug.apk
 
-# Build Signed Release APK
+# Build Signed Release APK (applicationId: com.charcuterieshelf, targetSdkVersion: 36)
 .\gradlew.bat assembleRelease
 # Output: android/app/build/outputs/apk/release/app-release.apk
 ```
