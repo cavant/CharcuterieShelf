@@ -192,6 +192,15 @@ cd android
 # Output: android/app/build/outputs/bundle/release/app-release.aab
 ```
 
+### 5. Automated Google Play Publishing
+```powershell
+# Publish to Closed Testing (alpha track)
+.\publish_play_console.ps1 -Track alpha
+
+# Publish to Production (once unlocked)
+.\publish_play_console.ps1 -Track production
+```
+
 
 ---
 
