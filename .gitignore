@@ -94,3 +94,8 @@ sw.*
 audiobookshelf-app-master.zip
 *.apk
 *.aab
+
+# Google Play Developer Service Account JSON
+*service-account*.json
+play-service-account.json
+android/play-service-account.json
