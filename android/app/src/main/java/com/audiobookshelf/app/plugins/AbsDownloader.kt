@@ -80,108 +80,123 @@ class AbsDownloader : Plugin() {
 
   @PluginMethod
   fun downloadLibraryItem(call: PluginCall) {
-    val libraryItemId = call.data.getString("libraryItemId").toString()
-    var episodeId = call.data.getString("episodeId").toString()
-    if (episodeId == "null") episodeId = ""
-    var localFolderId = call.data.getString("localFolderId", "").toString()
-    Log.d(tag, "Download library item $libraryItemId to folder $localFolderId / episode: $episodeId")
+    try {
+      val libraryItemId = call.data.getString("libraryItemId").toString()
+      var episodeId = call.data.getString("episodeId").toString()
+      if (episodeId == "null") episodeId = ""
+      var localFolderId = call.data.getString("localFolderId", "").toString()
+      Log.d(tag, "Download library item $libraryItemId to folder $localFolderId / episode: $episodeId")
 
-    val downloadId = if (episodeId.isEmpty()) libraryItemId else "$libraryItemId-$episodeId"
-    if (downloadItemManager.downloadItemQueue.find { it.id == downloadId } != null) {
-      Log.d(tag, "Download already started for this media entity $downloadId")
-      return call.resolve(JSObject("{\"error\":\"Download already started for this media entity\"}"))
-    }
+      val downloadId = if (episodeId.isEmpty()) libraryItemId else "$libraryItemId-$episodeId"
+      if (downloadItemManager.downloadItemQueue.find { it.id == downloadId } != null) {
+        Log.d(tag, "Download already started for this media entity $downloadId")
+        return call.resolve(JSObject("{\"error\":\"Download already started for this media entity\"}"))
+      }
 
-    apiHandler.getLibraryItemWithProgress(libraryItemId, episodeId) { libraryItem ->
-      if (libraryItem == null) {
-        call.resolve(JSObject("{\"error\":\"Server request failed\"}"))
-      } else {
-        Log.d(tag, "Got library item from server ${libraryItem.id}")
+      apiHandler.getLibraryItemWithProgress(libraryItemId, episodeId) { libraryItem ->
+        try {
+          if (libraryItem == null) {
+            call.resolve(JSObject("{\"error\":\"Server request failed\"}"))
+          } else {
+            Log.d(tag, "Got library item from server ${libraryItem.id}")
 
-        if (localFolderId == "") {
-          localFolderId = "internal-${libraryItem.mediaType}"
-        }
-        var localFolder = DeviceManager.dbManager.getLocalFolder(localFolderId)
-
-        if (localFolder == null && localFolderId.startsWith("internal-")) {
-          Log.d(tag, "Creating new App Storage internal LocalFolder $localFolderId")
-          localFolder = LocalFolder(localFolderId, "Internal App Storage", "", "", "", "internal", libraryItem.mediaType)
-          DeviceManager.dbManager.saveLocalFolder(localFolder)
-        }
-
-        if (localFolder != null) {
-          if (episodeId.isNotEmpty() && libraryItem.mediaType != "podcast") {
-            Log.e(tag, "Library item is not a podcast but episode was requested")
-            call.resolve(JSObject("{\"error\":\"Invalid library item not a podcast\"}"))
-          } else if (episodeId.isNotEmpty()) {
-            val podcast = libraryItem.media as Podcast
-            val episode = podcast.episodes?.find { podcastEpisode ->
-              podcastEpisode.id == episodeId
+            if (localFolderId == "") {
+              localFolderId = "internal-${libraryItem.mediaType}"
             }
-            if (episode == null) {
-              val enclosureUrl = call.getString("enclosureUrl") ?: ""
-              if (enclosureUrl.isNotEmpty()) {
-                val epTitle = call.getString("episodeTitle") ?: (if (episodeId.isNotEmpty()) episodeId else "Episode")
-                val epDuration = call.getDouble("episodeDuration") ?: 0.0
-                val epPubDate = call.getString("episodePubDate") ?: ""
-                val epPublishedAt = call.data.optLong("episodePublishedAt", System.currentTimeMillis())
-                val epDesc = call.getString("episodeDescription") ?: ""
-                val epSub = call.getString("episodeSubtitle") ?: ""
-                val epSeason = call.getString("episodeSeason") ?: ""
-                val epNum = call.getString("episodeNumber") ?: ""
-                val epType = call.getString("episodeType") ?: "full"
-                val mimeType = call.getString("mimeType") ?: "audio/mpeg"
+            var localFolder = DeviceManager.dbManager.getLocalFolder(localFolderId)
 
-                val safeFilename = "${cleanStringForFileSystem(epTitle)}.mp3"
-                val fileMeta = FileMetadata(safeFilename, ".mp3", safeFilename, safeFilename, 0L)
-                val audioTrack = AudioTrack(
-                  index = 1,
-                  startOffset = 0.0,
-                  duration = epDuration,
-                  title = epTitle,
-                  contentUrl = enclosureUrl,
-                  mimeType = mimeType,
-                  metadata = fileMeta,
-                  isLocal = false,
-                  localFileId = null,
-                  serverIndex = null
-                )
-                val audioFile = AudioFile(1, "0", fileMeta)
-                val rssEpisode = PodcastEpisode(
-                  id = episodeId,
-                  index = 1,
-                  episode = epNum,
-                  episodeType = epType,
-                  title = epTitle,
-                  subtitle = epSub,
-                  description = epDesc,
-                  pubDate = epPubDate,
-                  publishedAt = epPublishedAt,
-                  audioFile = audioFile,
-                  audioTrack = audioTrack,
-                  chapters = null,
-                  duration = epDuration,
-                  size = null,
-                  serverEpisodeId = episodeId,
-                  localEpisodeId = null
-                )
-                startLibraryItemDownload(libraryItem, localFolder, rssEpisode)
-                call.resolve()
+            if (localFolder == null && localFolderId.startsWith("internal-")) {
+              Log.d(tag, "Creating new App Storage internal LocalFolder $localFolderId")
+              localFolder = LocalFolder(localFolderId, "Internal App Storage", "", "", "", "internal", libraryItem.mediaType)
+              DeviceManager.dbManager.saveLocalFolder(localFolder)
+            }
+
+            if (localFolder != null) {
+              if (episodeId.isNotEmpty() && libraryItem.mediaType != "podcast") {
+                Log.e(tag, "Library item is not a podcast but episode was requested")
+                call.resolve(JSObject("{\"error\":\"Invalid library item not a podcast\"}"))
+              } else if (episodeId.isNotEmpty()) {
+                val podcast = libraryItem.media as Podcast
+                val episode = podcast.episodes?.find { podcastEpisode ->
+                  podcastEpisode.id == episodeId
+                }
+                val enclosureUrl = call.getString("enclosureUrl") ?: ""
+                if (episode == null || (episode.audioFile == null && episode.audioTrack == null && enclosureUrl.isNotEmpty())) {
+                  if (enclosureUrl.isNotEmpty()) {
+                    val epTitle = call.getString("episodeTitle") ?: (episode?.title ?: (if (episodeId.isNotEmpty()) episodeId else "Episode"))
+                    val epDuration = call.getDouble("episodeDuration") ?: (episode?.duration ?: 0.0)
+                    val epPubDate = call.getString("episodePubDate") ?: (episode?.pubDate ?: "")
+                    val epPublishedAt = call.data.optLong("episodePublishedAt", episode?.publishedAt ?: System.currentTimeMillis())
+                    val epDesc = call.getString("episodeDescription") ?: (episode?.description ?: "")
+                    val epSub = call.getString("episodeSubtitle") ?: (episode?.subtitle ?: "")
+                    val epSeason = call.getString("episodeSeason") ?: (episode?.episode ?: "")
+                    val epNum = call.getString("episodeNumber") ?: (episode?.episode ?: "")
+                    val epType = call.getString("episodeType") ?: (episode?.episodeType ?: "full")
+                    val mimeType = call.getString("mimeType") ?: "audio/mpeg"
+
+                    val safeFilename = "${cleanStringForFileSystem(epTitle)}.mp3"
+                    val fileMeta = FileMetadata(safeFilename, ".mp3", safeFilename, safeFilename, 0L)
+                    val audioTrack = AudioTrack(
+                      index = 1,
+                      startOffset = 0.0,
+                      duration = epDuration,
+                      title = epTitle,
+                      contentUrl = enclosureUrl,
+                      mimeType = mimeType,
+                      metadata = fileMeta,
+                      isLocal = false,
+                      localFileId = null,
+                      serverIndex = null
+                    )
+                    val audioFile = AudioFile(1, "0", fileMeta)
+                    val targetEpisode = episode ?: PodcastEpisode(
+                      id = episodeId,
+                      index = 1,
+                      episode = epNum,
+                      episodeType = epType,
+                      title = epTitle,
+                      subtitle = epSub,
+                      description = epDesc,
+                      pubDate = epPubDate,
+                      publishedAt = epPublishedAt,
+                      audioFile = audioFile,
+                      audioTrack = audioTrack,
+                      chapters = null,
+                      duration = epDuration,
+                      size = null,
+                      serverEpisodeId = episodeId,
+                      localEpisodeId = null
+                    )
+                    targetEpisode.audioFile = audioFile
+                    targetEpisode.audioTrack = audioTrack
+                    startLibraryItemDownload(libraryItem, localFolder, targetEpisode)
+                    call.resolve()
+                  } else if (episode == null) {
+                    call.resolve(JSObject("{\"error\":\"Invalid podcast episode not found\"}"))
+                  } else {
+                    startLibraryItemDownload(libraryItem, localFolder, episode)
+                    call.resolve()
+                  }
+                } else {
+                  startLibraryItemDownload(libraryItem, localFolder, episode)
+                  call.resolve()
+                }
               } else {
-                call.resolve(JSObject("{\"error\":\"Invalid podcast episode not found\"}"))
+                startLibraryItemDownload(libraryItem, localFolder, null)
+                call.resolve()
               }
             } else {
-              startLibraryItemDownload(libraryItem, localFolder, episode)
-              call.resolve()
+              call.resolve(JSObject("{\"error\":\"Local Folder Not Found\"}"))
             }
-          } else {
-            startLibraryItemDownload(libraryItem, localFolder, null)
-            call.resolve()
           }
-        } else {
-          call.resolve(JSObject("{\"error\":\"Local Folder Not Found\"}"))
+        } catch (e: Exception) {
+          Log.e(tag, "Error processing library item download callback", e)
+          call.resolve(JSObject("{\"error\":\"${e.message ?: "Failed to process download"}\"}"))
         }
       }
+    } catch (e: Exception) {
+      Log.e(tag, "Error starting library item download", e)
+      call.resolve(JSObject("{\"error\":\"${e.message ?: "Failed to start download"}\"}"))
     }
   }
 
@@ -290,7 +305,11 @@ class AbsDownloader : Plugin() {
       val downloadItem = DownloadItem(downloadItemId, libraryItem.id, episode?.id, libraryItem.userMediaProgress, DeviceManager.serverConnectionConfig?.id ?: "", DeviceManager.serverAddress, DeviceManager.serverUserId, libraryItem.mediaType, itemFolderPath, localFolder, podcastTitle, podcastTitle, libraryItem.media, mutableListOf())
 
       val isDirectUrl = audioTrack?.contentUrl?.startsWith("http://") == true || audioTrack?.contentUrl?.startsWith("https://") == true
-      var serverPath = if (isDirectUrl) audioTrack!!.contentUrl else "/api/items/${libraryItem.id}/file/${audioFileIno}/download"
+      var serverPath = if (isDirectUrl) audioTrack!!.contentUrl else if (audioFileIno != null) "/api/items/${libraryItem.id}/file/${audioFileIno}/download" else ""
+      if (serverPath.isEmpty()) {
+        Log.e(tag, "Cannot download podcast episode: neither direct URL nor audioFile ino available")
+        return
+      }
       var destinationFilename = getFilenameFromRelPath(audioTrack?.relPath ?: "${cleanStringForFileSystem(episode?.title ?: "episode")}.mp3")
       if (!destinationFilename.endsWith(".mp3") && !destinationFilename.endsWith(".m4a") && !destinationFilename.endsWith(".aac")) {
         destinationFilename += ".mp3"

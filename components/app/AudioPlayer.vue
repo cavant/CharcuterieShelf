@@ -864,8 +864,12 @@ export default {
     },
     onMetadata(data) {
       console.log('onMetadata', JSON.stringify(data))
-      this.totalDuration = Number(data.duration.toFixed(2))
-      this.currentTime = Number(data.currentTime.toFixed(2))
+      if (data.duration && !isNaN(data.duration) && Number(data.duration) > 0) {
+        this.totalDuration = Number(Number(data.duration).toFixed(2))
+      }
+      if (data.currentTime !== undefined && !isNaN(data.currentTime)) {
+        this.currentTime = Number(Number(data.currentTime).toFixed(2))
+      }
 
       // Done loading
       if (data.playerState !== 'BUFFERING' && data.playerState !== 'IDLE') {
@@ -885,6 +889,13 @@ export default {
     onPlaybackSession(playbackSession) {
       console.log('onPlaybackSession received', JSON.stringify(playbackSession))
       this.playbackSession = playbackSession
+
+      if (playbackSession && Number(playbackSession.duration) > 0) {
+        this.totalDuration = Number(playbackSession.duration)
+      } else if (playbackSession && Array.isArray(playbackSession.audioTracks) && playbackSession.audioTracks.length) {
+        const sum = playbackSession.audioTracks.reduce((acc, t) => acc + (Number(t.duration) || 0), 0)
+        if (sum > 0) this.totalDuration = sum
+      }
 
       this.isEnded = false
       this.isLoading = true

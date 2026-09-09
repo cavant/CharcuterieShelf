@@ -189,35 +189,42 @@ class DownloadItemManager(
             else
                     DeviceManager.getServerConnectionConfig(item.serverConnectionConfigId)?.token
                             ?: DeviceManager.token
-    activeCalls[part.id] =
-            InternalDownloadManager(
-                            stagingFile,
-                            part.fileSize,
-                            object : InternalProgressCallback {
-                              override fun onProgress(totalBytesWritten: Long, progress: Long) {
-                                synchronized(this@DownloadItemManager) {
-                                  if (part !in currentDownloadItemParts) return
-                                  part.bytesDownloaded = totalBytesWritten
-                                  part.progress = progress
-                                  part.lastUpdateTime = System.currentTimeMillis()
-                                  persist(item)
+    try {
+      activeCalls[part.id] =
+              InternalDownloadManager(
+                              stagingFile,
+                              part.fileSize,
+                              object : InternalProgressCallback {
+                                override fun onProgress(totalBytesWritten: Long, progress: Long) {
+                                  synchronized(this@DownloadItemManager) {
+                                    if (part !in currentDownloadItemParts) return
+                                    part.bytesDownloaded = totalBytesWritten
+                                    part.progress = progress
+                                    part.lastUpdateTime = System.currentTimeMillis()
+                                    persist(item)
+                                  }
                                 }
-                              }
 
-                              override fun onComplete(failed: Boolean) {
-                                synchronized(this@DownloadItemManager) {
-                                  if (part !in currentDownloadItemParts) return
-                                  part.failed = failed
-                                  part.completed = !failed
-                                  part.lastUpdateTime = System.currentTimeMillis()
-                                  activeCalls.remove(part.id)
-                                  persist(item, force = true)
+                                override fun onComplete(failed: Boolean) {
+                                  synchronized(this@DownloadItemManager) {
+                                    if (part !in currentDownloadItemParts) return
+                                    part.failed = failed
+                                    part.completed = !failed
+                                    part.lastUpdateTime = System.currentTimeMillis()
+                                    activeCalls.remove(part.id)
+                                    persist(item, force = true)
+                                  }
                                 }
-                              }
-                            },
-                            { hasAvailableSpace(part) }
-                    )
-                    .download(serverUrl(item, part), token)
+                              },
+                              { hasAvailableSpace(part) }
+                      )
+                      .download(serverUrl(item, part), token)
+    } catch (e: Exception) {
+      Log.e(tag, "Failed to start download for ${part.filename}", e)
+      part.failed = true
+      part.isMoving = false
+      failOrRetry(item, part, e.message ?: "Failed to start download")
+    }
   }
 
   @Synchronized
@@ -495,6 +502,9 @@ class DownloadItemManager(
                   }
 
   private fun serverUrl(item: DownloadItem, part: DownloadItemPart): String {
+    if (part.serverPath.startsWith("http://") || part.serverPath.startsWith("https://")) {
+      return part.serverPath
+    }
     val rawCover = if (part.serverPath.endsWith("/cover")) "?raw=1" else ""
     val address = if (DeviceManager.isConnectedToServer && DeviceManager.serverConnectionConfigId == item.serverConnectionConfigId && DeviceManager.serverAddress.isNotEmpty()) {
       DeviceManager.serverAddress

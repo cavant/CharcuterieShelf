@@ -1,6 +1,7 @@
 package com.audiobookshelf.app.managers
 
 import android.util.Log
+import com.audiobookshelf.app.device.DeviceManager
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -29,11 +30,21 @@ class InternalDownloadManager(
   fun download(url: String, token: String): Call {
     destinationFile.parentFile?.mkdirs()
     val existingBytes = destinationFile.takeIf { it.exists() }?.length() ?: 0L
+    val serverAddress = DeviceManager.serverAddress
+    val configAddress = DeviceManager.serverConnectionConfig?.address ?: ""
+    val configLocalAddress = DeviceManager.serverConnectionConfig?.localAddress ?: ""
+    val isAudiobookshelfServer = (serverAddress.isNotEmpty() && url.startsWith(serverAddress)) ||
+            (configAddress.isNotEmpty() && url.startsWith(configAddress)) ||
+            (configLocalAddress.isNotEmpty() && url.startsWith(configLocalAddress))
     val request =
             Request.Builder()
                     .url(url)
                     .addHeader("Accept-Encoding", "identity")
-                    .addHeader("Authorization", "Bearer $token")
+                    .apply {
+                      if (isAudiobookshelfServer && token.isNotEmpty()) {
+                        addHeader("Authorization", "Bearer $token")
+                      }
+                    }
                     .apply { if (existingBytes > 0L) header("Range", "bytes=$existingBytes-") }
                     .build()
     val call = client.newCall(request)

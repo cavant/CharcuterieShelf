@@ -262,7 +262,7 @@ export default {
             season: rssEp.season || null,
             episode: rssEp.episode || null,
             episodeType: rssEp.episodeType || null,
-            duration: rssEp.duration ? Number(rssEp.duration) : null,
+            duration: this.parseDuration(rssEp.duration || rssEp.durationSeconds || rssEp.itunesDuration) || null,
             enclosure: rssEp.enclosure || null,
             _rssEpisodeData: rssEp // Keep original RSS data for server download
           })
@@ -304,8 +304,8 @@ export default {
 
         // Duration sort uses numeric comparison
         if (this.sortKey === 'duration') {
-          aValue = a.duration || 0
-          bValue = b.duration || 0
+          aValue = this.parseDuration(a.duration)
+          bValue = this.parseDuration(b.duration)
           if (this.sortDesc) return bValue - aValue
           return aValue - bValue
         }
@@ -502,6 +502,21 @@ export default {
       this.episodesCopy = this.episodes.map((ep) => {
         return { ...ep }
       })
+    },
+    parseDuration(val) {
+      if (!val) return 0
+      if (typeof val === 'number') return isNaN(val) ? 0 : val
+      const str = String(val).trim()
+      if (!str) return 0
+      if (!isNaN(str)) return Number(str)
+      const parts = str.split(':').map((p) => Number(p))
+      if (parts.some((p) => isNaN(p))) return 0
+      if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]
+      } else if (parts.length === 2) {
+        return parts[0] * 60 + parts[1]
+      }
+      return 0
     },
     episodeDownloadQueued(episodeDownload) {
       if (episodeDownload.libraryItemId === this.libraryItemId) {

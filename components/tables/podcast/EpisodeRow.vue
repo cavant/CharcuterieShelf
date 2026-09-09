@@ -142,8 +142,24 @@ export default {
       if (this.episode?.episodeType === 'full') return null // only show Trailer/Bonus
       return this.episode?.episodeType
     },
+    durationSeconds() {
+      const val = this.episode?.duration
+      if (!val) return 0
+      if (typeof val === 'number') return isNaN(val) ? 0 : val
+      const str = String(val).trim()
+      if (!str) return 0
+      if (!isNaN(str)) return Number(str)
+      const parts = str.split(':').map((p) => Number(p))
+      if (parts.some((p) => isNaN(p))) return 0
+      if (parts.length === 3) {
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]
+      } else if (parts.length === 2) {
+        return parts[0] * 60 + parts[1]
+      }
+      return 0
+    },
     duration() {
-      return this.$secondsToTimestamp(this.episode?.duration)
+      return this.durationSeconds ? this.$secondsToTimestamp(this.durationSeconds) : ''
     },
     isStreaming() {
       return this.$store.getters['getIsMediaStreaming'](this.libraryItemId, this.effectiveEpisodeId)
@@ -188,7 +204,7 @@ export default {
     },
     timeRemaining() {
       if (this.streamIsPlaying) return 'Playing'
-      if (!this.itemProgressPercent) return this.$elapsedPretty(this.episode?.duration)
+      if (!this.itemProgressPercent) return this.durationSeconds ? this.$elapsedPretty(this.durationSeconds) : ''
       if (this.userIsFinished) return 'Finished'
       var remaining = Math.floor(this.itemProgress.duration - this.itemProgress.currentTime)
       return `${this.$elapsedPretty(remaining)} left`
@@ -285,7 +301,7 @@ export default {
       if (this.isRssOnly || !this.episode?.audioFile) {
         payload.enclosureUrl = this.enclosureUrl
         payload.episodeTitle = this.episode?.title || 'Episode'
-        payload.episodeDuration = this.episode?.duration || 0
+        payload.episodeDuration = this.durationSeconds || 0
         payload.episodePubDate = this.episode?.pubDate || ''
         payload.episodePublishedAt = this.episode?.publishedAt || Date.now()
         payload.episodeDescription = this.episode?.description || ''
@@ -328,7 +344,7 @@ export default {
             streamUrl: this.enclosureUrl,
             title: this.title,
             author: this.podcastTitle,
-            duration: this.episode?.duration || 0,
+            duration: this.durationSeconds || 0,
             coverUrl: this.coverUrl
           })
         } else {

@@ -1083,6 +1083,25 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun sendClientMetadata(playerState: PlayerState) {
+    val session = currentPlaybackSession
+    if (session != null) {
+      val exoDuration = currentPlayer?.duration ?: -1L
+      if (exoDuration > 0L) {
+        val exoDurationSec = exoDuration / 1000.0
+        var updated = false
+        if (session.duration <= 0.0) {
+          session.duration = exoDurationSec
+          updated = true
+        }
+        if (session.audioTracks.isNotEmpty() && session.audioTracks[0].duration <= 0.0) {
+          session.audioTracks[0].duration = exoDurationSec
+          updated = true
+        }
+        if (updated) {
+          mediaSessionConnector.invalidateMediaSessionMetadata()
+        }
+      }
+    }
     val duration = currentPlaybackSession?.getTotalDuration() ?: 0.0
     clientEventEmitter?.onMetadata(PlaybackMetadata(duration, getCurrentTimeSeconds(), playerState))
   }

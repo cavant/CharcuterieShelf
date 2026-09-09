@@ -157,6 +157,9 @@ class PlaybackSession(
   fun getTotalDuration(): Double {
     var total = 0.0
     audioTracks.forEach { total += it.duration }
+    if (total <= 0.0 && duration > 0.0) {
+      return duration
+    }
     return total
   }
 
@@ -245,6 +248,9 @@ class PlaybackSession(
                             MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI,
                             coverUri.toString()
                     )
+    if (totalDurationMs > 0L) {
+      metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalDurationMs)
+    }
 
     if (resolvedCoverBitmap != null) {
       metadataBuilder

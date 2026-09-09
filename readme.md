@@ -5,7 +5,7 @@
 ### *A gourmet client for self-hosted audiobooks and podcasts with Material You theming, Pocket Casts playback controls, and smart local/remote switching.*
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Support-Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/themagicsalami)
-[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.1--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
+[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.2--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf)
 [![Author: TheMagicSalami](https://img.shields.io/badge/Author-TheMagicSalami-red?style=for-the-badge)](https://github.com/cavant)
