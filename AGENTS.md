@@ -111,9 +111,9 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 
 > [!TIP]
 > **Cloud Distribution Path**:
-> After building release or debug APKs, copy the resulting binary to both:
-> 1. `E:\Google Drive\CharcuterieShelf.apk`
-> 2. `C:\Users\Connor\OneDrive\CharcuterieShelf.apk`
+> After building release or debug APKs/AABs, copy the resulting binaries to:
+> 1. `E:\Google Drive\CharcuterieShelf.apk` and `E:\Google Drive\CharcuterieShelf.aab`
+> 2. `C:\Users\Connor\OneDrive\CharcuterieShelf.apk` and `C:\Users\Connor\OneDrive\CharcuterieShelf.aab`
 
 > [!IMPORTANT]
 > **Mandatory Documentation Maintenance**:
@@ -129,7 +129,7 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 ### 4.1 Prerequisites
 - Node.js 20+
 - Java JDK 21 (`C:\Java\jdk-21`)
-- Android SDK (`C:\Users\Connor\AppData\Local\Android\Sdk`)
+- Android SDK (`C:\Android\Sdk`)
 
 ### 4.2 Compiling the Frontend & Syncing
 ```powershell
@@ -140,9 +140,10 @@ npm run generate
 npx cap sync
 ```
 
-### 4.3 Building Android APKs
+### 4.3 Building Android APKs & AAB (Play Store)
 ```powershell
 $env:JAVA_HOME = "C:\Java\jdk-21"
+$env:Path = "C:\Java\jdk-21\bin;" + $env:Path
 cd android
 
 # Build Debug APK
@@ -152,6 +153,10 @@ cd android
 # Build Signed Release APK (applicationId: com.charcuterieshelf)
 .\gradlew.bat assembleRelease
 # Output: android/app/build/outputs/apk/release/app-release.apk
+
+# Build Signed Release Android App Bundle (AAB for Google Play)
+.\gradlew.bat bundleRelease
+# Output: android/app/build/outputs/bundle/release/app-release.aab
 ```
 
 

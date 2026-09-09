@@ -185,6 +185,10 @@ cd android
 # Build Signed Release APK (applicationId: com.charcuterieshelf, targetSdkVersion: 36)
 .\gradlew.bat assembleRelease
 # Output: android/app/build/outputs/apk/release/app-release.apk
+
+# Build Signed Release Android App Bundle (AAB for Google Play Store)
+.\gradlew.bat bundleRelease
+# Output: android/app/build/outputs/bundle/release/app-release.aab
 ```
 
 
