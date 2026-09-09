@@ -101,8 +101,8 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 
 > [!CAUTION]
 > **Preserve Android Application ID**:
-> The internal Android package name / applicationId is **`com.charcuterieshelf`**.
-> This provides complete autonomy from the upstream Play Store app, avoids signature conflicts or Play Store update ownership blocks, and allows side-by-side installation. All future APK builds must retain `com.charcuterieshelf`.
+> The internal Android package name / applicationId is **`com.CharcuterieShelf`**.
+> This provides complete autonomy from the upstream Play Store app, avoids signature conflicts or Play Store update ownership blocks, and allows side-by-side installation. All future APK builds must retain `com.CharcuterieShelf`.
 
 > [!IMPORTANT]
 > **Headless Execution & No Interactive Prompts**:
@@ -150,7 +150,7 @@ cd android
 .\gradlew.bat assembleDebug
 # Output: android/app/build/outputs/apk/debug/app-debug.apk
 
-# Build Signed Release APK (applicationId: com.charcuterieshelf)
+# Build Signed Release APK (applicationId: com.CharcuterieShelf)
 .\gradlew.bat assembleRelease
 # Output: android/app/build/outputs/apk/release/app-release.apk
 

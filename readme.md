@@ -182,7 +182,7 @@ cd android
 .\gradlew.bat assembleDebug
 # Output: android/app/build/outputs/apk/debug/app-debug.apk
 
-# Build Signed Release APK (applicationId: com.charcuterieshelf, targetSdkVersion: 36)
+# Build Signed Release APK (applicationId: com.CharcuterieShelf, targetSdkVersion: 36)
 .\gradlew.bat assembleRelease
 # Output: android/app/build/outputs/apk/release/app-release.apk
 
