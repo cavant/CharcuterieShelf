@@ -186,8 +186,9 @@ class LocalStorage {
   // Value: JSON array of library item IDs (strings)
 
   _subKey(userId, serverAddress) {
-    // Normalize server address to avoid duplicates from trailing slashes etc.
-    const addr = (serverAddress || '').replace(/\/+$/, '').toLowerCase()
+    const serverConfig = this.vuexStore?.state?.user?.serverConnectionConfig
+    const stableId = serverConfig?.id || serverConfig?.remoteAddress || serverAddress || ''
+    const addr = stableId.replace(/\/+$/, '').toLowerCase()
     return `podcast_subs_${addr}_${userId}`
   }
 

@@ -118,7 +118,7 @@ export default {
       }
       this.fullPath = Path.join(this.selectedFolderPath, this.$sanitizeFilename(this.podcast.title))
     },
-    submit() {
+    async submit() {
       const podcastPayload = {
         path: this.fullPath,
         folderId: this.selectedFolderId,
@@ -143,12 +143,40 @@ export default {
       console.log('Podcast payload', podcastPayload)
 
       this._processing = true
+      const userId = this.$store.state.user.user?.id
+      const serverAddress = this.$store.getters['user/getServerAddress']
+
+      // 1. Pre-check: if podcast already exists in library, subscribe without failing
+      try {
+        const existingItems = await this.$nativeHttp.get(`/api/libraries/${this.currentLibrary.id}/items?limit=1000`).catch(() => null)
+        const matched = existingItems?.results?.find((it) => {
+          const feed = it.media?.metadata?.feedUrl
+          const title = it.media?.metadata?.title
+          if (feed && this.podcast.feedUrl && feed.trim().toLowerCase() === this.podcast.feedUrl.trim().toLowerCase()) return true
+          if (title && this.podcast.title && title.trim().toLowerCase() === this.podcast.title.trim().toLowerCase()) return true
+          return false
+        })
+
+        if (matched) {
+          console.log('[NewPodcastForm] Podcast already exists on server, subscribing user to existing item:', matched.id)
+          if (userId && serverAddress) {
+            await this.$localStore.addUserPodcastSubscription(userId, serverAddress, matched.id)
+            this.$eventBus.$emit('podcast-subscription-changed')
+          }
+          this._processing = false
+          this.$toast.success(this.$strings.ToastPodcastCreateSuccess || `Subscribed to "${matched.media?.metadata?.title || this.podcast.title}"`)
+          this.$router.push(`/item/${matched.id}`)
+          return
+        }
+      } catch (err) {
+        console.warn('[NewPodcastForm] Pre-check library items error, continuing to POST', err)
+      }
+
+      // 2. Not in library: create on server
       this.$nativeHttp
         .post('/api/podcasts', podcastPayload)
         .then(async (libraryItem) => {
           this._processing = false
-          const userId = this.$store.state.user.user?.id
-          const serverAddress = this.$store.getters['user/getServerAddress']
           if (userId && serverAddress && libraryItem?.id) {
             await this.$localStore.addUserPodcastSubscription(userId, serverAddress, libraryItem.id)
             this.$eventBus.$emit('podcast-subscription-changed')
@@ -156,7 +184,32 @@ export default {
           this.$toast.success(this.$strings.ToastPodcastCreateSuccess)
           this.$router.push(`/item/${libraryItem.id}`)
         })
-        .catch((error) => {
+        .catch(async (error) => {
+          console.warn('[NewPodcastForm] POST /api/podcasts failed, checking if already created:', error)
+          // 3. Fallback: if server reported error (e.g. 400 Podcast already exists), find existing item and subscribe
+          try {
+            const existingItems = await this.$nativeHttp.get(`/api/libraries/${this.currentLibrary.id}/items?limit=1000`).catch(() => null)
+            const matched = existingItems?.results?.find((it) => {
+              const feed = it.media?.metadata?.feedUrl
+              const title = it.media?.metadata?.title
+              if (feed && this.podcast.feedUrl && feed.trim().toLowerCase() === this.podcast.feedUrl.trim().toLowerCase()) return true
+              if (title && this.podcast.title && title.trim().toLowerCase() === this.podcast.title.trim().toLowerCase()) return true
+              return false
+            })
+            if (matched) {
+              if (userId && serverAddress) {
+                await this.$localStore.addUserPodcastSubscription(userId, serverAddress, matched.id)
+                this.$eventBus.$emit('podcast-subscription-changed')
+              }
+              this._processing = false
+              this.$toast.success(`Subscribed to "${matched.media?.metadata?.title || this.podcast.title}"`)
+              this.$router.push(`/item/${matched.id}`)
+              return
+            }
+          } catch (e) {
+            console.error('Fallback find failed', e)
+          }
+
           var errorMsg = error.response && error.response.data ? error.response.data : this.$strings.ToastPodcastCreateFailed
           console.error('Failed to create podcast', error)
           this._processing = false

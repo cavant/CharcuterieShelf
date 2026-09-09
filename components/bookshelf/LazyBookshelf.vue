@@ -202,8 +202,7 @@ export default {
           const serverAddress = this.$store.getters['user/getServerAddress']
           let subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, serverAddress)
           if (subs === null) {
-            // Auto-initialize with current library podcasts on first visit
-            subs = results.map((r) => r.id)
+            subs = []
             await this.$localStore.setUserPodcastSubscriptions(this.user.id, serverAddress, subs)
           }
           results = results.filter((r) => subs.includes(r.id))

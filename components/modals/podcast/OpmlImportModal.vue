@@ -477,13 +477,21 @@ export default {
         const userId = this.$store.state.user.user?.id
         const serverAddress = this.$store.getters['user/getServerAddress']
         if (userId && serverAddress) {
+          const selectedFeedUrls = new Set(this.selectedFeeds.map((f) => (f.feedUrl || '').trim().toLowerCase()))
           setTimeout(async () => {
             try {
               const res = await this.$nativeHttp.get(`/api/libraries/${this.targetLibrary.id}/items?limit=1000`)
               if (res && res.results) {
-                const allIds = res.results.map((r) => r.id)
+                // Only subscribe user to the podcasts that were actually in this import
+                const matchingIds = res.results
+                  .filter((r) => {
+                    const feed = (r.media?.metadata?.feedUrl || '').trim().toLowerCase()
+                    return selectedFeedUrls.has(feed)
+                  })
+                  .map((r) => r.id)
+
                 const currentSubs = (await this.$localStore.getUserPodcastSubscriptions(userId, serverAddress)) || []
-                const mergedSubs = Array.from(new Set([...currentSubs, ...allIds]))
+                const mergedSubs = Array.from(new Set([...currentSubs, ...matchingIds]))
                 await this.$localStore.setUserPodcastSubscriptions(userId, serverAddress, mergedSubs)
                 this.$eventBus.$emit('podcast-subscription-changed')
               }

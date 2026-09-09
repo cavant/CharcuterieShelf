@@ -258,7 +258,7 @@ export default {
 
         let subs = null
         if (this.currentLibraryIsPodcast && this.user?.id && this.$store.getters['user/getServerAddress']) {
-          subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.$store.getters['user/getServerAddress'])
+          subs = (await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.$store.getters['user/getServerAddress'])) || []
         }
 
         this.shelves = categories.map((cat) => {

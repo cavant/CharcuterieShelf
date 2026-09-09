@@ -72,10 +72,8 @@ export default {
       const userId = this.$store.state.user.user?.id
       const serverAddress = this.$store.getters['user/getServerAddress']
       if (userId && serverAddress) {
-        const subs = await this.$localStore.getUserPodcastSubscriptions(userId, serverAddress)
-        if (subs && Array.isArray(subs)) {
-          episodes = episodes.filter((ep) => subs.includes(ep.libraryItemId))
-        }
+        const subs = (await this.$localStore.getUserPodcastSubscriptions(userId, serverAddress)) || []
+        episodes = episodes.filter((ep) => subs.includes(ep.libraryItemId))
       }
       this.recentEpisodes = episodes
       this.totalEpisodes = episodes.length
