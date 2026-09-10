@@ -293,8 +293,8 @@
       <p><span class="font-bold text-fg">• Dual Audiobooks & Podcatcher:</span> Seamless playback for self-hosted audiobook and podcast collections.</p>
       <p><span class="font-bold text-fg">• Android Auto Compatibility:</span> Full in-car dashboard playback, media browsing, and search support.</p>
       <p><span class="font-bold text-fg">• Advanced Download Manager:</span> Multi-part background downloads, exponential backoff, per-item retry/cancel, and batch failure cleanup.</p>
-      <p><span class="font-bold text-fg">• Morphe-Grade Dynamic Theming:</span> 14 themes (including AMOLED Monet, Dracula, Tokyo Night, Gruvbox, Rosé Pine) with custom accent color palette selection.</p>
-      <p><span class="font-bold text-fg">• Pocket Casts Features:</span> Trim silence, intro/outro skipping, custom speeds per show, and End of Episode sleep timer.</p>
+      <p><span class="font-bold text-fg">• Dynamic Monet Theming:</span> 14 themes (including AMOLED Monet, Dracula, Tokyo Night, Gruvbox, Rosé Pine) with custom accent color palette selection.</p>
+      <p><span class="font-bold text-fg">• Pocket Casts Features:</span> 3-column reorderable favorites grid, trim silence, intro/outro skipping, custom speeds per show, and End of Episode sleep timer.</p>
       <p><span class="font-bold text-fg">• Modern Home Screen Widget:</span> Control playback, view album art, and seek directly from your Android launcher.</p>
       <p><span class="font-bold text-fg">• In-App Metadata & Chapter Editing:</span> Parity with the web client for editing details, chapters, matches, and covers.</p>
       <p><span class="font-bold text-fg">• Smart Local/Remote Switching:</span> Automatically switches to high-speed LAN when connected to designated home Wi-Fi SSIDs.</p>

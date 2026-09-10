@@ -8,9 +8,13 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.audiobookshelf.app.R
 import com.audiobookshelf.app.models.DownloadItemPart
 
@@ -67,18 +71,46 @@ class DownloadService : Service() {
     }
   }
 
+  private var cachedAppIcon: Bitmap? = null
+
+  private fun getAppIconBitmap(): Bitmap? {
+    if (cachedAppIcon != null) return cachedAppIcon
+    return try {
+      val drawable = ContextCompat.getDrawable(this, R.mipmap.ic_launcher) ?: return null
+      if (drawable is BitmapDrawable) {
+        cachedAppIcon = drawable.bitmap
+        return cachedAppIcon
+      }
+      val width = if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 192
+      val height = if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 192
+      val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+      val canvas = Canvas(bitmap)
+      drawable.setBounds(0, 0, canvas.width, canvas.height)
+      drawable.draw(canvas)
+      cachedAppIcon = bitmap
+      cachedAppIcon
+    } catch (e: Exception) {
+      null
+    }
+  }
+
   private fun notification(text: String, progress: Int = 0, determinate: Boolean = false): Notification {
     val cancelIntent = PendingIntent.getService(
             this, 1, Intent(this, DownloadService::class.java).setAction(ACTION_CANCEL), pendingIntentFlags())
-    return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.icon)
+    val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.icon_monochrome)
             .setContentTitle(DownloadServiceHost.notificationStrings(this).downloads)
             .setContentText(text)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             .setProgress(100, progress, !determinate)
             .addAction(0, DownloadServiceHost.notificationStrings(this).cancel, cancelIntent)
-            .build()
+    
+    getAppIconBitmap()?.let {
+      builder.setLargeIcon(it)
+    }
+
+    return builder.build()
   }
 
   private fun createChannel() {

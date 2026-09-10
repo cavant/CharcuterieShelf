@@ -5,7 +5,7 @@
 ### *A gourmet client for self-hosted audiobooks and podcasts with Material You theming, Pocket Casts playback controls, and smart local/remote switching.*
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Support-Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/themagicsalami)
-[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.4--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
+[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.6--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf)
 [![Author: TheMagicSalami](https://img.shields.io/badge/Author-TheMagicSalami-red?style=for-the-badge)](https://github.com/cavant)
@@ -18,11 +18,25 @@
 
 ---
 
+## 🧪 Help CharcuterieShelf Launch on Google Play! (Call for Testers)
+
+Google Play requires personal developer accounts to run a closed test with at least 14–20 opted-in testers for 14 days before granting production access. You can help get CharcuterieShelf officially published on Google Play!
+
+**How to join the closed test:**
+1. Send a quick email with your Google Play email address to **[connors.adventures@gmail.com](mailto:connors.adventures@gmail.com)** with the subject *"CharcuterieShelf Tester"*, or open a [Tester Request Issue](https://github.com/cavant/CharcuterieShelf/issues/new?title=Tester+Request&body=Please+add+my+Google+Play+email+to+the+closed+test+track:+%3Cinsert-email%3E).
+2. Once added to the tester group, accept the invite on the web:  
+   👉 **[Join Closed Testing on the Web](https://play.google.com/apps/testing/com.CharcuterieShelf)**
+3. Download the app directly from Google Play:  
+   👉 **[CharcuterieShelf on Google Play](https://play.google.com/store/apps/details?id=com.CharcuterieShelf)**
+4. Keep the app installed for 14 days and listen to your favorite audiobooks and podcasts! Your active testing directly helps unlock production status.
+
+---
+
 ## 📖 About CharcuterieShelf
 
-**CharcuterieShelf** is a feature-packed fork of [Audiobookshelf](https://github.com/advplyr/audiobookshelf-app) crafted by **TheMagicSalami** ([cavant](https://github.com/cavant)). 
+Welcome to **CharcuterieShelf**! A community-first, feature-packed client for [Audiobookshelf](https://github.com/advplyr/audiobookshelf-app) crafted by **TheMagicSalami** ([cavant](https://github.com/cavant)).
 
-While the official Audiobookshelf app is phenomenal, CharcuterieShelf was created to bridge critical gaps for power listeners: seamlessly moving between high-speed home Wi-Fi and mobile data with a single server profile, integrating top playback features inspired by **Pocket Casts**, supporting **Morphe-grade Material You** wallpaper theming & custom accent palettes, offering a modern **Android Auto** car dashboard experience, providing a resilient **Download Manager with error recovery**, a polished **home screen player widget**, and achieving complete **in-app editing parity with the web client**.
+While the official Audiobookshelf app is phenomenal, CharcuterieShelf was created to bridge critical gaps for power listeners: seamlessly moving between high-speed home Wi-Fi and mobile data with a single server profile, integrating top playback features inspired by **Pocket Casts** (including a 3-column reorderable favorites grid and zero-server storage downloads), supporting rich **Material You dynamic Monet wallpaper theming & custom accent palettes**, offering a modern **Android Auto** car dashboard experience, providing a resilient **Download Manager with error recovery**, a polished **home screen player widget**, and achieving complete **in-app editing parity with the web client**.
 
 ---
 
@@ -44,8 +58,8 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 
 ---
 
-### 🎨 Morphe-Grade Dynamic Theming & 14 Curated Palettes
-- **Morphe Parity**: Dynamic accent system unlocks wallpaper color extraction across the entire app UI, player controls, sliders, chips, and buttons.
+### 🎨 Dynamic Material You & 14 Curated Theme Palettes
+- **Dynamic Accent Engine**: Adaptive accent color system extracts Monet wallpaper tones on Android 12+ and applies them seamlessly across the entire app UI, player controls, sliders, chips, and buttons.
 - **Material You AMOLED**: Pitch Black `#000000` combined with dynamic Monet wallpaper accents for maximum OLED power efficiency.
 - **14 Built-In Themes**:
   - `material-you`: Android 12+ Monet wallpaper extraction.
