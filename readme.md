@@ -37,22 +37,15 @@ Google Play requires personal developer accounts to run a closed test with at le
 
 Welcome to **CharcuterieShelf**! A community-first, feature-packed client for [Audiobookshelf](https://github.com/advplyr/audiobookshelf-app) crafted by **TheMagicSalami** ([cavant](https://github.com/cavant)).
 
-While the official Audiobookshelf app is phenomenal, CharcuterieShelf was created to bridge critical gaps for power listeners: seamlessly moving between high-speed home Wi-Fi and mobile data with a single server profile, integrating top playback features inspired by **Pocket Casts** (including a 3-column reorderable favorites grid and zero-server storage downloads), supporting rich **Material You dynamic Monet wallpaper theming & custom accent palettes**, offering a modern **Android Auto** car dashboard experience, providing a resilient **Download Manager with error recovery**, a polished **home screen player widget**, and achieving complete **in-app editing parity with the web client**.
+While the official Audiobookshelf app is phenomenal, CharcuterieShelf was created to bridge critical gaps for power listeners: seamlessly moving between high-speed home Wi-Fi and mobile data with a single server profile, integrating top playback features inspired by **Pocket Casts** (including a 3-column reorderable favorites grid and zero-server storage downloads), supporting rich **Material You dynamic Monet wallpaper theming & custom accent palettes**, providing a resilient **Download Manager with error recovery**, a polished **home screen player widget**, and achieving complete **in-app editing parity with the web client**.
 
 ---
 
 ## ✨ Key Features & Screenshots
 
-### 🚗 Android Auto In-Car Dashboard Playback
-- **Car Dashboard Native Experience**: Full in-car dashboard playback, media browsing, and search support directly through Android Auto.
-- **Automotive Whitelist Support**: Built-in support for Android Auto projection (`gearhead`), `carservice`, and Bluetooth head unit AVRCP browsing.
-- **In-App Setup Guide**: Built-in 1-tap setup guide in **Settings → Android Auto** explaining how to toggle "Unknown sources" in Android Auto Developer Settings for sideloaded packages.
-
----
-
 ### 📥 Resilient Download Manager & Queue Recovery
 - **Dedicated Download Manager**: Redesigned `/downloading` view with media card thumbnails, real-time download percentages, downloaded vs total MB counters, and animated indicators.
-- **Error Recovery & Exponential Backoff**: Prevents download stalls with smart exponential retry backoff (2s, 4s, 8s, 16s, 32s) and dispatches failure notifications if retries are exhausted.
+- **Error Recovery & Exponential Backoff**: Prevents download stalls with smart exponential retry backoff (1s, 2s, 4s, 8s, 16s, capped at 30s; max 5 retries) and dispatches failure notifications if retries are exhausted.
 - **Granular Item Controls**: Individual **Retry** and **Cancel / Remove** actions on every active or failed media download.
 - **Global Batch Management**: 1-tap **Retry All Failed**, **Clear Failed**, and **Cancel All** batch controls.
 - **Collapsible File-by-File Breakdown**: Inspect individual files and parts within a multi-file audiobook with specific progress and error diagnostics.
@@ -151,7 +144,7 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 
 ---
 
-### 🎨 Material You & 8 Curated Themes
+### 🎨 Material You & 14 Curated Themes
 - **Material You (Dynamic Monet)**: Extracts color accents from your Android 12+ system wallpaper and applies them across the entire app UI and player controls.
 - **OLED Pitch Black**: Pure `#000000` dark mode optimized for battery saving on AMOLED displays.
 - **Nord**: Cool, arctic blue-gray aesthetic inspired by the popular developer palette.

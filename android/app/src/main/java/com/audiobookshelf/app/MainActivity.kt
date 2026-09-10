@@ -133,12 +133,17 @@ class MainActivity : BridgeActivity() {
 
   private fun requestNeededPermissions() {
     val needed = mutableListOf<String>()
-    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-      needed.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-    }
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-      needed.add(Manifest.permission.POST_NOTIFICATIONS)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+        needed.add(Manifest.permission.POST_NOTIFICATIONS)
+      }
+      if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        needed.add(Manifest.permission.READ_MEDIA_AUDIO)
+      }
+    } else {
+      if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+        needed.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+      }
     }
     if (needed.isNotEmpty()) {
       ActivityCompat.requestPermissions(this, needed.toTypedArray(), REQUEST_PERMISSIONS)

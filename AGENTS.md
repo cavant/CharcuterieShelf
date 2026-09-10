@@ -110,8 +110,9 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 - **On-Demand Checking & Release Notes**: Check for updates anytime from **Settings → App Updates**, read formatted changelogs, or tap the pulsing **Update Available** badge in `SideDrawer.vue`.
 - **Permission & Security**: Uses `REQUEST_INSTALL_PACKAGES` permission and secure `FileProvider` content URIs (`com.CharcuterieShelf.fileprovider`).
 
-### 2.7 Android Auto In-Car Dashboard Playback
-- **MediaBrowserServiceCompat Integration**: Full in-car dashboard playback, media browsing, and search support directly through Android Auto (`PlayerNotificationService.kt`).
+### 2.7 Android Auto In-Car Dashboard Playback (Inherited Upstream Feature)
+- **Inherited Upstream Capability**: MediaBrowserServiceCompat integration is inherited directly from upstream Audiobookshelf and works by default. Do not advertise or highlight Android Auto as a custom fork-exclusive differentiator in public readmes or feature lists.
+- **MediaBrowserServiceCompat Integration**: In-car dashboard playback, media browsing, and search support directly through Android Auto (`PlayerNotificationService.kt`).
 - **Automotive Whitelist Support**: Built-in support for Android Auto projection (`com.google.android.projection.gearhead`), `carservice`, Google Quick Search Box, and Bluetooth head unit AVRCP browsing.
 - **Automotive Metadata**: Declares `automotive_app_desc.xml` and small car icon metadata in `AndroidManifest.xml`.
 

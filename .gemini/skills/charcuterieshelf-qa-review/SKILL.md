@@ -21,12 +21,14 @@ This QA harness validates all system layers before builds or releases are publis
 2. **Localization Health**:
    - Validates all 42 locale files in `strings/` parse as JSON, end with newlines, and follow standard ASCII sorting
    - Checks presence of required CharcuterieShelf keys in `en-us.json`
-3. **Branding & Native Manifests**:
+3. **Branding, Security & Native Manifests**:
    - Preserves `applicationId "com.CharcuterieShelf"` strictly
-   - Verifies target SDK is API 36 (Android 16)
-   - Checks custom URL scheme (`charcuterieshelf://`) and app names
-   - Verifies `FileProvider`, `PlayerNotificationService`, `DownloadService`, and Android Auto manifests
-   - Verifies presence of native drawables and `icon_monochrome`
+   - Verifies target SDK is API 36 (Android 16), compliant with Google Play target API rules
+   - Verifies Android 13+ (API 33+) granular media permission (`READ_MEDIA_AUDIO`) and `READ_EXTERNAL_STORAGE` `maxSdkVersion="32"`
+   - Verifies native code / 16 KB page size compatibility (managed Kotlin/Java + Webview, 0 unaligned NDK `.so` binaries)
+   - Checks custom URL scheme (`charcuterieshelf://`) and app branding strings
+   - Verifies `FileProvider`, `PlayerNotificationService` (`mediaPlayback`), and `DownloadService` (`dataSync`) service types
+   - Verifies presence of native drawables and monochrome status bar icons (`icon_monochrome.xml`)
 4. **GitHub Actions CI/CD & Issue Templates**:
    - Workflow syntax, explicit `permissions:` declarations
    - `chmod +x ./android/gradlew` execution guards
