@@ -9,6 +9,10 @@ on:
     paths-ignore:
       - 'ios/**'
       - 'readme.md'
+
+permissions:
+  contents: read
+
 jobs:
   main:
     runs-on: ubuntu-latest

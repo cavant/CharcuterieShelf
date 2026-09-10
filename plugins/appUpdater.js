@@ -3,45 +3,12 @@ import { AbsAppUpdater } from '@/plugins/capacitor'
 import { Browser } from '@capacitor/browser'
 import pkg from '@/package.json'
 
-function parseSemver(ver) {
-  if (!ver) return { major: 0, minor: 0, patch: 0, pre: null, preNum: 0, raw: '' }
-  const clean = ver.replace(/^v/, '').trim()
-  const [main, pre] = clean.split('-')
-  const [major, minor, patch] = main.split('.').map((n) => parseInt(n, 10) || 0)
-  let preNum = 0
-  if (pre) {
-    const match = pre.match(/\d+/)
-    preNum = match ? parseInt(match[0], 10) : 0
-  }
-  return { major, minor, patch, pre: pre || null, preNum, raw: clean }
-}
-
-function isNewerVersion(currentVer, latestVer) {
-  const c = parseSemver(currentVer)
-  const l = parseSemver(latestVer)
-
-  if (l.major !== c.major) return l.major > c.major
-  if (l.minor !== c.minor) return l.minor > c.minor
-  if (l.patch !== c.patch) return l.patch > c.patch
-
-  // Both have same major.minor.patch
-  // Non-prerelease (e.g. 0.14.2) is newer than prerelease (e.g. 0.14.2-beta)
-  if (c.pre && !l.pre) return true
-  if (!c.pre && l.pre) return false
-
-  // Both are prereleases
-  if (c.pre && l.pre) {
-    if (l.preNum !== c.preNum) return l.preNum > c.preNum
-    return l.raw > c.raw
-  }
-
-  return false
-}
+import { parseSemver, isNewerVersion } from '@/utils/semverUtils'
 
 export default (context, inject) => {
   const { app, $config } = context
   const state = Vue.observable({
-    currentVersion: $config?.version || app?.$config?.version || pkg.version || '0.14.3-beta',
+    currentVersion: $config?.version || app?.$config?.version || pkg.version || '0.14.7-beta',
     isChecking: false,
     updateAvailable: false,
     latestRelease: null,

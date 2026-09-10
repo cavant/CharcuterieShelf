@@ -8,6 +8,9 @@ on:
       - 'ios/**'
       - 'readme.md'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -57,9 +60,9 @@ jobs:
       - name: build test page
         working-directory: ghpages
         run: |
-          sed -i "s/__DATE__/$(date)/g" index.html
-          sed -i "s/__COMMIT__/$(git rev-parse --short HEAD)/g" index.html
-          sed -i "s/__APK__/$(ls *apk)/g" index.html
+          sed -i "s|__DATE__|$(date -u +'%Y-%m-%d %H:%M:%S UTC')|g" index.html
+          sed -i "s|__COMMIT__|$(git rev-parse --short HEAD)|g" index.html
+          sed -i "s|__APK__|$(ls *apk)|g" index.html
 
       - name: upload test page artifact
         uses: actions/upload-pages-artifact@v3
@@ -70,6 +73,7 @@ jobs:
     needs: build
 
     permissions:
+      contents: read
       pages: write
       id-token: write
 

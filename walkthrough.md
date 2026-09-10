@@ -210,7 +210,7 @@ The signed release APK and Play Store developer AAB bundle (`com.CharcuterieShel
 
 ---
 
-## 12. Verification Results
+## 12. Verification Results (v0.14.2-beta)
 
 | Test / Check | Result | Notes |
 | :--- | :--- | :--- |
@@ -227,3 +227,112 @@ The signed release APK and Play Store developer AAB bundle (`com.CharcuterieShel
 | **Version Code & Name (`aapt`)** | ✅ PASSED | `versionCode='122'`, `versionName='0.14.2-beta'` |
 | **Cloud Drive Copy** | ✅ PASSED | Both `.apk` and `.aab` copied to Google Drive and OneDrive |
 | **GitHub Release Upload** | ✅ PASSED | Release `v0.14.2-beta` created with `CharcuterieShelf.apk` and `CharcuterieShelf.aab` |
+
+---
+
+## 13. In-App Updates via GitHub Releases (v0.14.3-beta)
+
+- **Semantic Versioning & Update Engine (`utils/semverUtils.js` & `plugins/appUpdater.js`)**:
+  - Automatically queries GitHub Releases API (`api.github.com/repos/cavant/CharcuterieShelf/releases`) in the background on launch.
+  - Compares running app version against latest published release using semantic version comparator (`isNewerVersion`).
+  - Displays release changelog, download progress indicator, and APK package installer intent via `FileProvider` (`AbsAppUpdater.kt`).
+  - Pulsing navigation badge in `SideDrawer.vue` and on-demand check button in `pages/settings.vue`.
+
+---
+
+## 14. Download Queue Recovery & Android Auto Support (v0.14.4-beta)
+
+- **Resilient Download Manager (`pages/downloading.vue` & `DownloadItemManager.kt`)**:
+  - Dedicated `/downloading` management console with progress indicators, MB transferred counters, and active/queued/failed filter chips.
+  - Exponential retry backoff on failure (2s, 4s, 8s, 16s, 32s) before terminal failure notifications.
+  - Granular controls: per-item Retry/Cancel and global batch actions ("Retry All Failed", "Clear Failed", "Cancel All").
+  - Multi-file audiobook collapsible breakdown displaying status of individual audio parts.
+- **Android Auto Dashboard Playback (`PlayerNotificationService.kt`)**:
+  - `PlayerNotificationService` extends `MediaBrowserServiceCompat` to provide media tree browsing on car head units.
+  - Automotive whitelist support for `com.google.android.projection.gearhead`, `carservice`, Google Quick Search Box, and Bluetooth head unit AVRCP browsing.
+  - In-app setup instructions in `pages/settings.vue` for sideloaded packages.
+
+---
+
+## 15. Material You Monet Dynamic Theming & 14 Curated Palettes
+
+- **Dynamic Wallpaper Color Extraction (`AbsThemePlugin.kt`)**:
+  - Extracts Android 12+ Monet wallpaper colors and injects dynamic CSS variables (`--dynamic-accent`, `--dynamic-bg`, `--dynamic-primary`, etc.).
+- **14 Built-In Palettes (`assets/tailwind.css` & `pages/settings.vue`)**:
+  - `material-you`: Monet dynamic wallpaper tones.
+  - `material-you-amoled`: Pitch black `#000000` base with Monet accents.
+  - `dracula`: Classic vampire dark with purple/pink tones.
+  - `tokyo-night`: Cyberpunk navy and neon cyan.
+  - `gruvbox`: Retro warm dark with golden yellow accents.
+  - `rose-pine`: Muted elegance with soft rose accents.
+  - `black`: Pitch black OLED `#000000`.
+  - `nord`: Arctic blue-gray developer theme.
+  - `catppuccin`: Macchiato pastel plum.
+  - `forest`: Deep evergreen pine.
+  - `sepia`: Warm book paper and terracotta.
+  - `slate`: Midnight blue slate.
+  - `dark`: Default neutral charcoal.
+  - `light`: Crisp clean daytime white.
+- **Interactive Accent Tone Engine**: Instant accent picker in settings across 9 vibrant color choices.
+
+---
+
+## 16. Pocket Casts 3-Column Reorderable Favorites Grid (v0.14.5-beta – v0.14.7-beta)
+
+- **Dedicated Favorites Shelf (`pages/bookshelf/favorites.vue`)**:
+  - 3-column Pocket Casts-style cover art grid with circular unplayed episode count badges.
+  - Long-press or tap "Reorder" to enter tactile drag-and-drop reorder mode powered by `vuedraggable`.
+  - Stored per user and server profile in `$localStore` (`podcast_favs_${serverAddress}_${userId}`).
+  - Filterable batch add/remove modal and 1-tap seeding from current subscriptions.
+  - Fixed blank-screen drag regression in v0.14.7-beta.
+
+---
+
+## 17. CI/CD Pipeline Repair & Google Play Closed Testing Onboarding
+
+- **GitHub Actions Workflows**:
+  - `build-apk.yml`: Added explicit permissions and executable `gradlew` permissions.
+  - `deploy-apk.yml`: Configured GitHub Pages test APK deployment to `https://cavant.github.io/CharcuterieShelf/` with delimiter-safe sed syntax.
+  - `i18n-check.yml`: Automated localization validation and uncommitted diff check.
+  - `close_blank_issues.yaml`: Whitelisted closed testing requests from being automatically closed.
+  - `.github/ISSUE_TEMPLATE/tester_request.yml`: Dedicated intake form for Google Play 14-day closed testers.
+  - Contact email: `support@themagicsalami.net`.
+
+---
+
+## 18. Full-Stack Automated QA Test Harness & Reusable Agent Skill
+
+### Test Suites Implemented (`tests/` & `scripts/run-qa-harness.js`)
+1. **Frontend Unit Suite**:
+   - `update-checker.test.mjs`: Semver parsing and release comparison.
+   - `duration-parser.test.mjs`: `HH:MM:SS`, `MM:SS`, and raw duration parsing.
+   - `favorites-store.test.mjs`: Per-user/server isolation, CRUD, toggle, and drag-and-drop reorder integrity.
+   - `theming.test.mjs`: CSS variable mapping and settings theme parity across all 14 palettes.
+   - `download-queue.test.mjs`: Exponential retry backoff, URL resolution safety, and CDN bearer token isolation.
+2. **Localization Suite**:
+   - `i18n-syntax-sort.test.mjs`: Validates all 42 locale JSON files for valid JSON, trailing newlines, and ASCII alphabetical sorting.
+3. **Branding & Native Manifest Suite**:
+   - `manifest-branding.test.mjs`: Validates `com.CharcuterieShelf` applicationId, custom URL scheme, API 36 target, and required services/drawables.
+4. **CI/CD & Workflows Suite**:
+   - `workflows-templates.test.mjs`: Validates workflow permissions, gradlew execution, issue templates, and tester whitelisting.
+5. **Static Bundle Suite**:
+   - `bundle-build.test.mjs`: Verifies Nuxt static bundle output and pre-rendered route files (`dist/bookshelf/favorites/index.html`, etc.).
+6. **Android Native Shell Suite**:
+   - `gradle-build.test.mjs`: Verifies wrapper scripts, Java 21 JDK prerequisite, and signed release keystore.
+
+### Verification Results (Current Master)
+
+| Verification Suite | Test Count | Result | Execution Time |
+| :--- | :--- | :--- | :--- |
+| **Frontend Unit: Update Checker & Semver** | 6 tests | ✅ PASSED | 168ms |
+| **Frontend Unit: Playback Duration & Timestamp** | 6 tests | ✅ PASSED | 169ms |
+| **Frontend Unit: Podcast Favorites Store** | 5 tests | ✅ PASSED | 173ms |
+| **Frontend Unit: 14 Theme Palettes & Monet** | 5 tests | ✅ PASSED | 169ms |
+| **Frontend Unit: Download Queue & Recovery** | 4 tests | ✅ PASSED | 163ms |
+| **Localization: i18n Syntax & Alphabetization** | 44 tests | ✅ PASSED | 210ms |
+| **Branding & Manifest: com.CharcuterieShelf** | 6 tests | ✅ PASSED | 165ms |
+| **CI/CD & Workflows: GitHub Actions & Templates** | 7 tests | ✅ PASSED | 170ms |
+| **Static Bundle: Nuxt Pre-Rendered Routes** | 3 tests | ✅ PASSED | 165ms |
+| **Android Native: Shell & Gradle Environment** | 5 tests | ✅ PASSED | 161ms |
+| **TOTALS** | **87 tests (10 suites)** | **✅ 100% PASSED** | **1.71s** |
+

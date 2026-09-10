@@ -17,8 +17,21 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
+            const issueTitle = (context.payload.issue.title || "").toLowerCase();
             const issueBody = context.payload.issue.body || "";
-            
+            const issueLabels = (context.payload.issue.labels || []).map(l => (l.name || "").toLowerCase());
+
+            // Whitelist tester requests from being closed
+            if (
+              issueTitle.includes("tester request") ||
+              issueTitle.includes("closed test") ||
+              issueLabels.includes("tester-request") ||
+              issueLabels.includes("closed-testing")
+            ) {
+              console.log("Tester request issue detected, whitelisting.");
+              return;
+            }
+
             // Match Markdown headings (e.g., # Heading, ## Heading)
             const headingRegex = /^(#{1,6})\s.+/gm;
             const headings = [...issueBody.matchAll(headingRegex)];
@@ -29,7 +42,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.payload.issue.number,
-                body: "Thank you for opening an issue! To help us review your request efficiently, please use one of the provided issue templates. If you're seeking information or have a general question, consider opening a Discussion or joining the conversation on our Discord. Thanks!"
+                body: "Thank you for opening an issue! To help us review your request efficiently, please use one of the provided issue templates. If you are applying to join the Google Play closed test track, please use the **Closed Testing Request** template. Thanks!"
               });
 
               // Close the issue

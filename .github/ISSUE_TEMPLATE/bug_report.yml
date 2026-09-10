@@ -1,5 +1,5 @@
-name: 🐞 ABS App Bug Report
-description: File a bug/issue and help us improve the Audiobookshelf mobile apps.
+name: 🐞 CharcuterieShelf Bug Report
+description: File a bug or issue to help us improve CharcuterieShelf.
 title: '[Bug]: '
 labels: ['bug', 'triage']
 body:
@@ -8,14 +8,11 @@ body:
       value: '## App Bug Description'
   - type: markdown
     attributes:
-      value: 'Thank you for filing a bug report! 🐛'
-  - type: markdown
-    attributes:
-      value: 'Join the [discord server](https://discord.gg/HQgCbd6E75) for questions or if you are not sure about a bug.'
+      value: 'Thank you for filing a bug report! 🐛 For tester support or questions, email **support@themagicsalami.net**.'
   - type: dropdown
     id: confirm-check
     attributes:
-      label: I have verified that the [bug is not already awaiting release](https://github.com/advplyr/audiobookshelf-app/issues?q=is%3Aissue%20label%3A%22awaiting%20release%22)
+      label: I have verified that the bug is not already reported in open issues
       multiple: false
       options:
         - 'Yes'
@@ -35,7 +32,7 @@ body:
     attributes:
       label: Steps to Reproduce the Issue
       description: Please help us understand how we can reliably reproduce the issue.
-      placeholder: '1. Go to the library page of a Podcast library and...'
+      placeholder: '1. Go to Podcasts -> Favorites...'
     validations:
       required: true
   - type: textarea
@@ -43,7 +40,7 @@ body:
     attributes:
       label: What was Expected?
       description: Please help us understand what should have happened.
-      placeholder: Please help us visualize by including a doodle or screenshot.
+      placeholder: Describe expected behavior.
     validations:
       required: true
   - type: markdown
@@ -53,46 +50,49 @@ body:
     id: phone-model
     attributes:
       label: Phone Model
-      description: What kind of phone are you using?
-      placeholder: e.g. Pixel 6, iPhone 14, Samsung Galaxy s23, etc
+      description: What kind of phone or tablet are you using?
+      placeholder: e.g. Pixel 8, Galaxy S24, Motorola Edge, etc
     validations:
       required: true
   - type: input
     id: phone-os
     attributes:
       label: Phone OS
-      description: What operating system? If Android, is it stock or a custom system?
-      placeholder: e.g. Android 14, iOS 17.4, etc
+      description: What operating system? If Android, what version (e.g. Android 14, 15)?
+      placeholder: e.g. Android 14, Android 15, Android Auto
     validations:
       required: true
   - type: dropdown
     id: app-version
     attributes:
-      label: Audiobookshelf App Version
-      description: Please ensure your app is up to date. *If you are using a 3rd-party app, please reach out to them directly.*
-      multiple: true
+      label: CharcuterieShelf App Version
+      description: Please check Settings -> Version in the app.
+      multiple: false
       options:
-        - 'Android App - 0.13.0'
-        - 'iOS App - 0.13.0'
-        - 'Android App - 0.12.0'
-        - 'iOS App - 0.12.0'
+        - '0.14.7-beta'
+        - '0.14.6-beta'
+        - '0.14.5-beta'
+        - '0.14.4-beta'
+        - '0.14.3-beta'
+        - 'Other (specify in notes)'
     validations:
       required: true
   - type: dropdown
     id: install-source
     attributes:
       label: Installation Source
-      multiple: true
+      multiple: false
       options:
-        - 'Google Play Store'
-        - 'Testflight'
-        - 'SideStore'
-        - 'Other (List in "Additional Notes")'
+        - 'Google Play Store (Closed Testing)'
+        - 'GitHub Releases APK'
+        - 'GitHub Pages Live Tester Portal'
+        - 'Built from Source'
+        - 'Other'
     validations:
       required: true
   - type: textarea
     id: additional-notes
     attributes:
       label: Additional Notes
-      description: Anything else you want to add?
-      placeholder: 'e.g. I have tried X, Y, and Z.'
+      description: Anything else you want to add? (Server version, network setup, error logs)
+      placeholder: 'e.g. Connected via LAN with local-first auto-switch.'

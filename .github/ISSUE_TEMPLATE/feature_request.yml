@@ -1,14 +1,14 @@
-name: 🚀 App Feature Request
-description: Request a feature/enhancement
+name: 🚀 CharcuterieShelf Feature Request
+description: Request a feature or enhancement for CharcuterieShelf
 title: '[Enhancement]: '
 labels: ['enhancement']
 body:
   - type: markdown
     attributes:
-      value: '## App Feature Request Description'
+      value: '## Feature Request Description'
   - type: markdown
     attributes:
-      value: 'Please first search in both issues & discussions for your enhancement and make sure your app is up to date.'
+      value: 'Please check existing issues and discussions first. We welcome ideas for podcatcher tools, theming, widgets, and Android Auto!'
   - type: textarea
     id: describe
     attributes:
@@ -22,36 +22,28 @@ body:
     attributes:
       label: Why would this be helpful?
       description: Please help us understand why this would enhance your experience.
-      placeholder: Explain the "why" or "use case".
+      placeholder: Explain the use case or audio listening workflow.
     validations:
       required: true
   - type: textarea
     id: image
     attributes:
-      label: Future Implementation (Screenshot)
-      description: Please help us visualize by including a doodle or screenshot.
-      placeholder: How could this look or where could it go?
+      label: UI / UX Concept (Screenshot or mock)
+      description: How could this look or where could it go?
+      placeholder: If applicable, describe placement in player, settings, bookshelf, or drawer.
     validations:
-      required: true
-  - type: markdown
-    attributes:
-      value: '## App Current Implementation'
+      required: false
   - type: dropdown
     id: version
     attributes:
-      label: Audiobookshelf App Version
-      description: Please ensure your app is up to date. *If you are using a 3rd-party app, please reach out to them directly.*
-      multiple: true
+      label: Current App Version You Use
+      multiple: false
       options:
-        - 'Android App - 0.13.0'
-        - 'iOS App - 0.13.0'
-        - 'Android App - 0.12.0'
-        - 'iOS App - 0.12.0'
+        - '0.14.7-beta'
+        - '0.14.6-beta'
+        - '0.14.5-beta'
+        - '0.14.4-beta'
+        - '0.14.3-beta'
+        - 'Other'
     validations:
       required: true
-  - type: textarea
-    id: current-image
-    attributes:
-      label: Current Implementation (Screenshot)
-      description: What screen were you looking at when you thought of this enhancement?
-      placeholder: If an image is not applicable, please explain why.

@@ -1,0 +1,45 @@
+name: 🧪 Closed Testing Request (Google Play)
+description: Request to join the CharcuterieShelf 14-day closed testing track on Google Play
+title: '[Tester Request]: '
+labels: ['tester-request', 'closed-testing']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### Thank you for supporting CharcuterieShelf! 🥪📚
+        Google Play requires 14–20 opted-in testers for 14 consecutive days before granting production access.
+        Filling out this form will queue your Google account to be added to the closed testing track.
+        Alternatively, you can email **support@themagicsalami.net** directly if you prefer not to share your email address in a public issue.
+  - type: input
+    id: email
+    attributes:
+      label: Google Play Account Email
+      description: The Gmail / Google Account email you use on your Android device for Google Play.
+      placeholder: name@gmail.com
+    validations:
+      required: true
+  - type: input
+    id: device-model
+    attributes:
+      label: Android Device & OS Version
+      description: What phone/tablet model and Android version will you be testing on?
+      placeholder: e.g. Pixel 8 (Android 15), Galaxy S24 (Android 14)
+    validations:
+      required: true
+  - type: checkboxes
+    id: commitments
+    attributes:
+      label: Tester Commitment
+      options:
+        - label: I agree to keep CharcuterieShelf installed for at least 14 days.
+          required: true
+        - label: I will report any playback bugs, crashes, or UI issues I encounter.
+          required: false
+  - type: textarea
+    id: additional-notes
+    attributes:
+      label: Additional Notes (Optional)
+      description: Any other feedback, audio formats you listen to, or Android Auto setup?
+      placeholder: e.g. Listening via Android Auto in a Honda Civic, testing podcast RSS sync.
+    validations:
+      required: false

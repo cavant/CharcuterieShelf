@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Discord
-    url: https://discord.gg/HQgCbd6E75
-    about: Ask questions, get help troubleshooting, and join the Abs community here.
+  - name: Tester Support Email
+    url: mailto:support@themagicsalami.net
+    about: Email support for closed testing invites, bug reports, and feedback.
+  - name: Live Tester Portal
+    url: https://cavant.github.io/CharcuterieShelf/
+    about: Download latest test APK builds and view build release notes.

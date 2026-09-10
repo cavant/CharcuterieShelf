@@ -8,6 +8,9 @@ on:
     paths:
       - 'strings/**'
 
+permissions:
+  contents: read
+
 jobs:
   update_translations:
     runs-on: ubuntu-latest
@@ -22,9 +25,12 @@ jobs:
       with:
         node-version: '20'
 
-    # The only argument is the `directory`, which is where the i18n files are
-    # stored.
+    # The only argument is the `directory`, which is where the i18n files are stored.
     - name: Run Update JSON Files action
       uses: audiobookshelf/audiobookshelf-i18n-updater@v1.3.0
       with:
-        directory: 'strings/'  # Adjust the directory path as needed
+        directory: 'strings/'
+
+    - name: Verify i18n files are sorted and committed cleanly
+      run: |
+        git diff --exit-code || (echo "Error: i18n translation files contain unsorted keys or formatting differences. Please run npm run test:i18n to verify." && exit 1)

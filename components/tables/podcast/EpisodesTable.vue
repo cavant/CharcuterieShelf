@@ -111,6 +111,7 @@
 
 <script>
 import { Dialog } from '@capacitor/dialog'
+import { parseDuration } from '@/utils/playbackUtils'
 
 export default {
   props: {
@@ -504,19 +505,7 @@ export default {
       })
     },
     parseDuration(val) {
-      if (!val) return 0
-      if (typeof val === 'number') return isNaN(val) ? 0 : val
-      const str = String(val).trim()
-      if (!str) return 0
-      if (!isNaN(str)) return Number(str)
-      const parts = str.split(':').map((p) => Number(p))
-      if (parts.some((p) => isNaN(p))) return 0
-      if (parts.length === 3) {
-        return parts[0] * 3600 + parts[1] * 60 + parts[2]
-      } else if (parts.length === 2) {
-        return parts[0] * 60 + parts[1]
-      }
-      return 0
+      return parseDuration(val)
     },
     episodeDownloadQueued(episodeDownload) {
       if (episodeDownload.libraryItemId === this.libraryItemId) {

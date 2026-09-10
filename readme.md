@@ -23,12 +23,13 @@
 Google Play requires personal developer accounts to run a closed test with at least 14–20 opted-in testers for 14 days before granting production access. You can help get CharcuterieShelf officially published on Google Play!
 
 **How to join the closed test:**
-1. Send a quick email with your Google Play email address to **[support@themagicsalami.net](mailto:support@themagicsalami.net)** with the subject *"CharcuterieShelf Tester"*, or open a [Tester Request Issue](https://github.com/cavant/CharcuterieShelf/issues/new?title=Tester+Request&body=Please+add+my+Google+Play+email+to+the+closed+test+track:+%3Cinsert-email%3E).
-2. Once added to the tester group, accept the invite on the web:  
+1. Send an email with your Google Play email address to **[support@themagicsalami.net](mailto:support@themagicsalami.net)** with the subject *"CharcuterieShelf Tester"*, or open a **[Closed Testing Request Issue](https://github.com/cavant/CharcuterieShelf/issues/new?template=tester_request.yml)**.
+2. Download instant automated test APK builds from the **[Live Web Tester Portal](https://cavant.github.io/CharcuterieShelf/)**.
+3. Once added to the tester group, accept the invite on the web:  
    👉 **[Join Closed Testing on the Web](https://play.google.com/apps/testing/com.CharcuterieShelf)**
-3. Download the app directly from Google Play:  
+4. Download the app directly from Google Play:  
    👉 **[CharcuterieShelf on Google Play](https://play.google.com/store/apps/details?id=com.CharcuterieShelf)**
-4. Keep the app installed for 14 days and listen to your favorite audiobooks and podcasts! Your active testing directly helps unlock production status.
+5. Keep the app installed for 14 days and listen to your favorite audiobooks and podcasts! Your active testing directly helps unlock production status.
 
 ---
 
@@ -265,6 +266,21 @@ cd android
 .\publish_play_console.ps1 -Track production
 ```
 
+### 6. Automated Full-Stack QA & Code Review Harness
+Ensure your changes are release-ready across all layers:
+```powershell
+# Run the entire full-stack QA suite (all 10 verification suites)
+npm run test:qa
+
+# Or run specific test targets:
+npm test              # Frontend unit tests (semver, duration, favorites, theming, queue)
+npm run test:i18n     # i18n syntax & ASCII sort check
+npm run test:branding # Package ID, custom URL scheme, and native manifests
+npm run test:github   # CI/CD workflows and issue templates
+npm run test:build    # Static Nuxt bundle pre-rendering health
+npm run test:android  # Gradle wrapper and SDK prerequisites
+```
+Reusable Antigravity QA Skill: `.agents/skills/charcuterieshelf-qa-review/SKILL.md`
 
 ---
 
