@@ -2,9 +2,11 @@ name: Verify all i18n files are alphabetized
 
 on:
   push:
+    paths:
+      - 'strings/**'
   pull_request:
     paths:
-      - strings/** # Should only check if any strings changed
+      - 'strings/**'
 
 jobs:
   update_translations:
