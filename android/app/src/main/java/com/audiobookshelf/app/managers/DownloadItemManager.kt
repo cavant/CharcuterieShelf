@@ -51,6 +51,7 @@ class DownloadItemManager(
     fun onDownloadItemPartUpdate(downloadItemPart: DownloadItemPart)
     fun onDownloadItemComplete(jsobj: JSObject)
     fun onQueueChanged(hasWork: Boolean)
+    fun onDownloadItemCancelled(itemId: String)
   }
 
   interface InternalProgressCallback {
@@ -123,8 +124,79 @@ class DownloadItemManager(
       part.isMoving = false
       part.downloadId = null
       part.retryCount = 0
+      part.waitingForSpace = false
+      clientEventEmitter.onDownloadItemPartUpdate(part)
     }
     persist(item, force = true)
+    clientEventEmitter.onDownloadItem(item)
+  }
+
+  @Synchronized
+  fun cancelDownloadItem(downloadItemId: String): Boolean {
+    val item = downloadItemQueue.find { it.id == downloadItemId } ?: return false
+    Log.i(tag, "Cancelling download item $downloadItemId (${item.itemTitle})")
+
+    item.downloadItemParts.forEach { part ->
+      activeCalls.remove(part.id)?.cancel()
+      currentDownloadItemParts.remove(part)
+      reservations.remove(part.destinationPath)
+      try {
+        val staging = File(part.destinationPath)
+        if (staging.exists()) staging.delete()
+      } catch (e: Exception) {
+        Log.w(tag, "Could not delete staging file for ${part.filename}", e)
+      }
+    }
+
+    IncompleteDownloadCleanup.cancel(context, item.id)
+    downloadItemQueue.remove(item)
+    DeviceManager.dbManager.removeDownloadItem(item.id)
+    clientEventEmitter.onDownloadItemCancelled(item.id)
+    checkUpdateDownloadQueue()
+    notifyQueueChanged()
+    return true
+  }
+
+  @Synchronized
+  fun retryDownloadItemById(downloadItemId: String): Boolean {
+    val item = downloadItemQueue.find { it.id == downloadItemId }
+    if (item == null) {
+      Log.w(tag, "retryDownloadItemById: Item not found in memory queue: $downloadItemId")
+      val dbItem = DeviceManager.dbManager.getDownloadItem(downloadItemId) ?: return false
+      addDownloadItem(dbItem)
+      return true
+    }
+    Log.i(tag, "Retrying download item $downloadItemId (${item.itemTitle})")
+    retryDownloadItem(item)
+    checkUpdateDownloadQueue()
+    notifyQueueChanged()
+    return true
+  }
+
+  @Synchronized
+  fun clearFailedDownloads(): Int {
+    val failedItems = downloadItemQueue.filter { it.hasFailed }.toList()
+    Log.i(tag, "clearFailedDownloads: Clearing ${failedItems.size} failed download items")
+    var cleared = 0
+    failedItems.forEach { item ->
+      if (cancelDownloadItem(item.id)) {
+        cleared++
+      }
+    }
+    return cleared
+  }
+
+  @Synchronized
+  fun retryAllFailed(): Int {
+    val failedItems = downloadItemQueue.filter { it.hasFailed }.toList()
+    Log.i(tag, "retryAllFailed: Retrying ${failedItems.size} failed download items")
+    var retried = 0
+    failedItems.forEach { item ->
+      if (retryDownloadItemById(item.id)) {
+        retried++
+      }
+    }
+    return retried
   }
 
   @Synchronized
@@ -134,6 +206,7 @@ class DownloadItemManager(
     downloadItemQueue.forEach { item ->
       item.downloadItemParts.forEach { part -> File(part.destinationPath).delete() }
       DeviceManager.dbManager.removeDownloadItem(item.id)
+      clientEventEmitter.onDownloadItemCancelled(item.id)
     }
     currentDownloadItemParts.clear()
     reservations.clear()
@@ -286,14 +359,29 @@ class DownloadItemManager(
       item.terminalFailureAt = item.terminalFailureAt ?: System.currentTimeMillis()
       persist(item, force = true)
       IncompleteDownloadCleanup.schedule(context, item)
+      clientEventEmitter.onDownloadItemPartUpdate(part)
+      clientEventEmitter.onDownloadItem(item)
       notifyQueueChanged()
       return
     }
+    val backoffMs = (1000L * (1 shl (part.retryCount - 1))).coerceAtMost(30000L)
+    Log.w(tag, "Scheduling retry #${part.retryCount} for ${part.filename} in ${backoffMs}ms ($reason)")
     part.failed = false
     part.completed = false
-    part.downloadId = null
+    part.downloadId = BACKOFF_DOWNLOAD_ID
     part.isMoving = false
     persist(item, force = true)
+    clientEventEmitter.onDownloadItemPartUpdate(part)
+
+    scope.launch {
+      delay(backoffMs)
+      synchronized(this@DownloadItemManager) {
+        if (part.downloadId == BACKOFF_DOWNLOAD_ID) {
+          part.downloadId = null
+          checkUpdateDownloadQueue()
+        }
+      }
+    }
   }
 
   private fun finalizeInternalFile(item: DownloadItem, part: DownloadItemPart) {
@@ -516,6 +604,7 @@ class DownloadItemManager(
 
   private companion object {
     const val APP_MANAGED_DOWNLOAD_ID = -1L
+    const val BACKOFF_DOWNLOAD_ID = -2L
     const val MAX_SIMULTANEOUS_DOWNLOADS = 3
     const val WATCH_INTERVAL_MS = 1_000L
     const val STALL_TIMEOUT_MS = 60_000L

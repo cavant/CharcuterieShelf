@@ -125,6 +125,29 @@ class LocalStorage {
     }
   }
 
+  async setCustomAccent(accent) {
+    try {
+      if (!accent) {
+        await Preferences.remove({ key: 'customAccent' })
+      } else {
+        await Preferences.set({ key: 'customAccent', value: accent })
+      }
+      console.log('[LocalStorage] Set custom accent', accent)
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set custom accent', error)
+    }
+  }
+
+  async getCustomAccent() {
+    try {
+      var obj = await Preferences.get({ key: 'customAccent' }) || {}
+      return obj.value || null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get custom accent', error)
+      return false
+    }
+  }
+
   async setLanguage(lang) {
     try {
       await Preferences.set({ key: 'lang', value: lang })

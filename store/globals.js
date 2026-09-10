@@ -100,6 +100,7 @@ export const mutations = {
     state.isModalOpen = val
   },
   addUpdateItemDownload(state, downloadItem) {
+    downloadItem.hasFailed = !!(downloadItem.terminalFailureAt || downloadItem.downloadItemParts?.some((p) => p.failed))
     var index = state.itemDownloads.findIndex((i) => i.id == downloadItem.id)
     if (index >= 0) {
       state.itemDownloads.splice(index, 1, downloadItem)
@@ -125,6 +126,8 @@ export const mutations = {
       return newDip
     })
 
+    downloadItem.hasFailed = !!(downloadItem.terminalFailureAt || downloadItem.downloadItemParts?.some((p) => p.failed))
+
     if (totalBytes > 0) {
       downloadItem.itemProgress = Math.min(1, totalBytesDownloaded / totalBytes)
       console.log(`updateDownloadItemPart: filename=${downloadItemPart.filename}, totalBytes=${totalBytes}, downloaded=${totalBytesDownloaded}, itemProgress=${downloadItem.itemProgress}`)
@@ -133,7 +136,16 @@ export const mutations = {
     }
   },
   removeItemDownload(state, id) {
-    state.itemDownloads = state.itemDownloads.filter((i) => i.id != id)
+    state.itemDownloads = state.itemDownloads.filter((i) => i.id != id && i.libraryItemId != id)
+  },
+  clearFailedItemDownloads(state) {
+    state.itemDownloads = state.itemDownloads.filter((i) => !i.hasFailed && !i.downloadItemParts?.some((p) => p.failed))
+  },
+  setItemDownloads(state, items) {
+    state.itemDownloads = (items || []).map((item) => {
+      item.hasFailed = !!(item.terminalFailureAt || item.downloadItemParts?.some((p) => p.failed))
+      return item
+    })
   },
   clearItemDownloads(state) {
     state.itemDownloads = []

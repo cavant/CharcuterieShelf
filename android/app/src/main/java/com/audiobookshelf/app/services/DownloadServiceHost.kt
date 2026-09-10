@@ -124,6 +124,9 @@ object DownloadServiceHost {
       bridgeEmitter.onQueueChanged(hasWork)
       service?.onQueueChanged(hasWork)
     }
+    override fun onDownloadItemCancelled(itemId: String) {
+      bridgeEmitter.onDownloadItemCancelled(itemId)
+    }
   }
 
   private object NoopEmitter : DownloadItemManager.DownloadEventEmitter {
@@ -131,6 +134,7 @@ object DownloadServiceHost {
     override fun onDownloadItemPartUpdate(downloadItemPart: com.audiobookshelf.app.models.DownloadItemPart) = Unit
     override fun onDownloadItemComplete(jsobj: JSObject) = Unit
     override fun onQueueChanged(hasWork: Boolean) = Unit
+    override fun onDownloadItemCancelled(itemId: String) = Unit
   }
 
   private const val NOTIFICATION_PREFERENCES = "download_notifications"

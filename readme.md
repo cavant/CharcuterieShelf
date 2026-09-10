@@ -5,7 +5,7 @@
 ### *A gourmet client for self-hosted audiobooks and podcasts with Material You theming, Pocket Casts playback controls, and smart local/remote switching.*
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Support-Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/themagicsalami)
-[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.3--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
+[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.4--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf)
 [![Author: TheMagicSalami](https://img.shields.io/badge/Author-TheMagicSalami-red?style=for-the-badge)](https://github.com/cavant)
@@ -22,11 +22,49 @@
 
 **CharcuterieShelf** is a feature-packed fork of [Audiobookshelf](https://github.com/advplyr/audiobookshelf-app) crafted by **TheMagicSalami** ([cavant](https://github.com/cavant)). 
 
-While the official Audiobookshelf app is phenomenal, CharcuterieShelf was created to bridge critical gaps for power listeners: seamlessly moving between high-speed home Wi-Fi and mobile data with a single server profile, integrating top playback features inspired by **Pocket Casts**, supporting **Material You** wallpaper theming, offering a polished **home screen player widget**, and achieving complete **in-app editing parity with the web client**.
+While the official Audiobookshelf app is phenomenal, CharcuterieShelf was created to bridge critical gaps for power listeners: seamlessly moving between high-speed home Wi-Fi and mobile data with a single server profile, integrating top playback features inspired by **Pocket Casts**, supporting **Morphe-grade Material You** wallpaper theming & custom accent palettes, offering a modern **Android Auto** car dashboard experience, providing a resilient **Download Manager with error recovery**, a polished **home screen player widget**, and achieving complete **in-app editing parity with the web client**.
 
 ---
 
 ## ✨ Key Features & Screenshots
+
+### 🚗 Android Auto In-Car Dashboard Playback
+- **Car Dashboard Native Experience**: Full in-car dashboard playback, media browsing, and search support directly through Android Auto.
+- **Automotive Whitelist Support**: Built-in support for Android Auto projection (`gearhead`), `carservice`, and Bluetooth head unit AVRCP browsing.
+- **In-App Setup Guide**: Built-in 1-tap setup guide in **Settings → Android Auto** explaining how to toggle "Unknown sources" in Android Auto Developer Settings for sideloaded packages.
+
+---
+
+### 📥 Resilient Download Manager & Queue Recovery
+- **Dedicated Download Manager**: Redesigned `/downloading` view with media card thumbnails, real-time download percentages, downloaded vs total MB counters, and animated indicators.
+- **Error Recovery & Exponential Backoff**: Prevents download stalls with smart exponential retry backoff (2s, 4s, 8s, 16s, 32s) and dispatches failure notifications if retries are exhausted.
+- **Granular Item Controls**: Individual **Retry** and **Cancel / Remove** actions on every active or failed media download.
+- **Global Batch Management**: 1-tap **Retry All Failed**, **Clear Failed**, and **Cancel All** batch controls.
+- **Collapsible File-by-File Breakdown**: Inspect individual files and parts within a multi-file audiobook with specific progress and error diagnostics.
+
+---
+
+### 🎨 Morphe-Grade Dynamic Theming & 14 Curated Palettes
+- **Morphe Parity**: Dynamic accent system unlocks wallpaper color extraction across the entire app UI, player controls, sliders, chips, and buttons.
+- **Material You AMOLED**: Pitch Black `#000000` combined with dynamic Monet wallpaper accents for maximum OLED power efficiency.
+- **14 Built-In Themes**:
+  - `material-you`: Android 12+ Monet wallpaper extraction.
+  - `material-you-amoled`: Pure pitch black with Monet dynamic accents.
+  - `dracula`: Iconic vampire dark theme with rich purple & pink accents.
+  - `tokyo-night`: Cyberpunk deep navy with electric cyan highlights.
+  - `gruvbox`: Retro warm dark with golden yellow accents.
+  - `rose-pine`: Muted elegance with soft rose accents.
+  - `black`: OLED Pitch Black `#000000`.
+  - `nord`: Arctic blue-gray developer palette.
+  - `catppuccin`: Macchiato pastel tones on rich plum.
+  - `forest`: Deep evergreen pine with mint highlights.
+  - `sepia`: Antique book paper and terracotta tones.
+  - `slate`: Midnight blue slate with cyan trackbars.
+  - `dark`: Balanced neutral charcoal dark.
+  - `light`: Crisp daytime white theme.
+- **Interactive Custom Accent Color Picker**: Choose custom accents in **Settings** (Theme Default, Emerald, Electric Cyan, Sky Blue, Royal Violet, Hot Pink, Sunset Amber, Crimson Red, Lime) that react instantly across the entire interface.
+
+---
 
 ### 📲 In-App Updating via GitHub Releases
 - **Automated Update Detection**: CharcuterieShelf checks GitHub Releases for newer versions automatically in the background on startup.

@@ -34,6 +34,28 @@
       </div>
     </div>
 
+    <!-- Custom Accent Palette -->
+    <div class="py-3">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-sm font-medium text-fg">Accent Color</p>
+        <span class="text-xxs text-fg-muted font-mono">{{ activeAccentLabel }}</span>
+      </div>
+      <div class="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
+        <button
+          v-for="color in accentColorPalette"
+          :key="color.value || 'default'"
+          type="button"
+          class="flex-shrink-0 w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center shadow-sm active:scale-95"
+          :class="customAccent === color.value ? 'border-fg scale-110' : 'border-border/60 hover:scale-105'"
+          :style="{ backgroundColor: color.hex }"
+          :title="color.name"
+          @click="selectCustomAccent(color.value)"
+        >
+          <span v-if="customAccent === color.value" class="material-symbols text-xs text-black font-bold">check</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Playback settings -->
     <p class="uppercase text-xs font-semibold text-fg-muted mb-2 mt-10">{{ $strings.HeaderPlaybackSettings }}</p>
     <div class="py-3 flex items-center">
@@ -173,6 +195,24 @@
           <ui-text-input :value="androidAutoBrowseSeriesSequenceOrderOption" readonly append-icon="expand_more" style="max-width: 200px" />
         </div>
       </div>
+
+      <!-- Android Auto Setup Card -->
+      <div class="mt-3 p-4 rounded-2xl bg-secondary/40 border border-border/50 text-xs text-fg-muted space-y-2.5">
+        <div class="flex items-center gap-2 text-fg font-semibold text-sm">
+          <span class="material-symbols text-accent text-lg">directions_car</span>
+          <span>Car Dashboard Setup (Android Auto)</span>
+        </div>
+        <p class="leading-relaxed">
+          CharcuterieShelf is natively compatible with Android Auto. Because this app is an independent package (<code class="text-accent text-xxs font-mono">com.CharcuterieShelf</code>), Android Auto requires <strong class="text-fg">"Unknown sources"</strong> to be enabled once in Android Auto Developer Settings to display on your vehicle screen:
+        </p>
+        <div class="bg-primary/50 rounded-xl p-3 border border-border/30 space-y-1.5 font-mono text-xxs text-fg">
+          <p><span class="text-accent font-bold">1.</span> Open phone <strong>Settings</strong> &gt; search <strong>Android Auto</strong>.</p>
+          <p><span class="text-accent font-bold">2.</span> Scroll to the very bottom and tap <strong>Version</strong> 10 times until Developer mode is enabled.</p>
+          <p><span class="text-accent font-bold">3.</span> Tap the <strong>3 dots (⋮)</strong> in the top-right corner &gt; <strong>Developer settings</strong>.</p>
+          <p><span class="text-accent font-bold">4.</span> Check the box for <strong class="text-accent">Unknown sources</strong>.</p>
+          <p><span class="text-accent font-bold">5.</span> Connect to your car or wireless adapter — CharcuterieShelf will appear!</p>
+        </div>
+      </div>
     </template>
 
     <!-- App Updates -->
@@ -251,8 +291,10 @@
     <p class="uppercase text-xs font-semibold text-fg-muted mb-3 mt-8">Key Features</p>
     <div class="rounded-2xl bg-primary/30 border border-border/40 p-4 mb-8 text-xs text-fg-muted space-y-2 leading-relaxed">
       <p><span class="font-bold text-fg">• Dual Audiobooks & Podcatcher:</span> Seamless playback for self-hosted audiobook and podcast collections.</p>
+      <p><span class="font-bold text-fg">• Android Auto Compatibility:</span> Full in-car dashboard playback, media browsing, and search support.</p>
+      <p><span class="font-bold text-fg">• Advanced Download Manager:</span> Multi-part background downloads, exponential backoff, per-item retry/cancel, and batch failure cleanup.</p>
+      <p><span class="font-bold text-fg">• Morphe-Grade Dynamic Theming:</span> 14 themes (including AMOLED Monet, Dracula, Tokyo Night, Gruvbox, Rosé Pine) with custom accent color palette selection.</p>
       <p><span class="font-bold text-fg">• Pocket Casts Features:</span> Trim silence, intro/outro skipping, custom speeds per show, and End of Episode sleep timer.</p>
-      <p><span class="font-bold text-fg">• Material You Dynamic Themes:</span> Monet wallpaper extraction on Android 12+ alongside 8 custom curated dark/light palettes.</p>
       <p><span class="font-bold text-fg">• Modern Home Screen Widget:</span> Control playback, view album art, and seek directly from your Android launcher.</p>
       <p><span class="font-bold text-fg">• In-App Metadata & Chapter Editing:</span> Parity with the web client for editing details, chapters, matches, and covers.</p>
       <p><span class="font-bold text-fg">• Smart Local/Remote Switching:</span> Automatically switches to high-speed LAN when connected to designated home Wi-Fi SSIDs.</p>
@@ -360,6 +402,18 @@ export default {
         androidAutoBrowseSeriesSequenceOrder: 'ASC'
       },
       theme: 'dark',
+      customAccent: '',
+      accentColorPalette: [
+        { name: 'Theme Default', value: '', hex: '#1ad691' },
+        { name: 'Emerald', value: '26 214 145', hex: '#1ad691' },
+        { name: 'Electric Cyan', value: '6 182 212', hex: '#06b6d4' },
+        { name: 'Sky Blue', value: '56 189 248', hex: '#38bdf8' },
+        { name: 'Royal Violet', value: '168 85 247', hex: '#a855f7' },
+        { name: 'Hot Pink', value: '236 72 153', hex: '#ec4899' },
+        { name: 'Sunset Amber', value: '245 158 11', hex: '#f59e0b' },
+        { name: 'Crimson Red', value: '239 68 68', hex: '#ef4444' },
+        { name: 'Lime', value: '132 204 22', hex: '#84cc16' }
+      ],
       lockCurrentOrientation: false,
       settingInfo: {
         disableShakeToResetSleepTimer: {
@@ -512,6 +566,10 @@ export default {
     jumpBackwardsOption() {
       return this.getJumpLabel(this.settings.jumpBackwardsTime)
     },
+    activeAccentLabel() {
+      const match = this.accentColorPalette.find((c) => c.value === this.customAccent)
+      return match ? match.name : 'Custom'
+    },
     themeOptionItems() {
       return [
         {
@@ -527,12 +585,32 @@ export default {
           value: 'material-you'
         },
         {
+          text: 'Material You AMOLED (Pitch Black Monet)',
+          value: 'material-you-amoled'
+        },
+        {
           text: 'Nord (Arctic Blue)',
           value: 'nord'
         },
         {
           text: 'Catppuccin (Macchiato)',
           value: 'catppuccin'
+        },
+        {
+          text: 'Dracula (Vampire Dark)',
+          value: 'dracula'
+        },
+        {
+          text: 'Tokyo Night (Cyberpunk)',
+          value: 'tokyo-night'
+        },
+        {
+          text: 'Gruvbox (Retro Warm)',
+          value: 'gruvbox'
+        },
+        {
+          text: 'Rosé Pine (Muted Elegance)',
+          value: 'rose-pine'
         },
         {
           text: 'Forest (Evergreen)',
@@ -732,6 +810,14 @@ export default {
       }
       this.$localStore.setTheme(theme)
     },
+    async selectCustomAccent(colorValue) {
+      this.customAccent = colorValue
+      await this.$localStore.setCustomAccent(colorValue)
+      if (this.$applyCustomAccent) {
+        this.$applyCustomAccent(colorValue)
+      }
+      this.$toast.success(`Accent color set to ${this.activeAccentLabel}`)
+    },
     toggleLegalSection(section) {
       if (this.openLegalSections[section] !== undefined) {
         this.openLegalSections[section] = !this.openLegalSections[section]
@@ -883,6 +969,7 @@ export default {
     async init() {
       this.loading = true
       this.theme = (await this.$localStore.getTheme()) || 'dark'
+      this.customAccent = (await this.$localStore.getCustomAccent()) || ''
       this.deviceData = await this.$db.getDeviceData()
       this.$store.commit('setDeviceData', this.deviceData)
       this.setDeviceSettings()

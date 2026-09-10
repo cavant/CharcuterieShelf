@@ -12,6 +12,7 @@ import com.audiobookshelf.app.managers.DownloadItemManager
 import com.audiobookshelf.app.services.DownloadServiceHost
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -41,7 +42,69 @@ class AbsDownloader : Plugin() {
     override fun onQueueChanged(hasWork: Boolean) {
       notifyListeners("onQueueChanged", JSObject().put("hasWork", hasWork))
     }
+    override fun onDownloadItemCancelled(itemId: String) {
+      notifyListeners("onDownloadItemCancelled", JSObject().put("id", itemId))
+    }
   })
+
+  @PluginMethod
+  fun cancelDownloadItem(call: PluginCall) {
+    val itemId = call.getString("id")
+    if (itemId.isNullOrEmpty()) {
+      call.reject("Must provide download item id")
+      return
+    }
+    val success = downloadItemManager.cancelDownloadItem(itemId)
+    val res = JSObject()
+    res.put("success", success)
+    call.resolve(res)
+  }
+
+  @PluginMethod
+  fun retryDownloadItem(call: PluginCall) {
+    val itemId = call.getString("id")
+    if (itemId.isNullOrEmpty()) {
+      call.reject("Must provide download item id")
+      return
+    }
+    val success = downloadItemManager.retryDownloadItemById(itemId)
+    val res = JSObject()
+    res.put("success", success)
+    call.resolve(res)
+  }
+
+  @PluginMethod
+  fun clearFailedDownloads(call: PluginCall) {
+    val count = downloadItemManager.clearFailedDownloads()
+    val res = JSObject()
+    res.put("count", count)
+    call.resolve(res)
+  }
+
+  @PluginMethod
+  fun retryAllFailed(call: PluginCall) {
+    val count = downloadItemManager.retryAllFailed()
+    val res = JSObject()
+    res.put("count", count)
+    call.resolve(res)
+  }
+
+  @PluginMethod
+  fun cancelAllDownloads(call: PluginCall) {
+    downloadItemManager.cancelAll()
+    call.resolve(JSObject().put("success", true))
+  }
+
+  @PluginMethod
+  fun getDownloadQueue(call: PluginCall) {
+    val array = JSArray()
+    downloadItemManager.downloadItemQueue.forEach { item ->
+      array.put(JSObject(jacksonMapper.writeValueAsString(item)))
+    }
+    val res = JSObject()
+    res.put("queue", array)
+    call.resolve(res)
+  }
 
   override fun load() {
     mainActivity = (activity as MainActivity)

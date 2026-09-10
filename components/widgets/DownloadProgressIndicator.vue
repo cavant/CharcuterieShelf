@@ -67,6 +67,11 @@ export default {
 
       this.$store.commit('globals/removeItemDownload', data.libraryItemId)
     },
+    onDownloadItemCancelled(data) {
+      if (data?.id) {
+        this.$store.commit('globals/removeItemDownload', data.id)
+      }
+    },
     onDownloadItem(downloadItem) {
       console.log('DownloadProgressIndicator onDownloadItem', JSON.stringify(downloadItem))
 
@@ -78,8 +83,20 @@ export default {
     onDownloadItemPartUpdate(itemPart) {
       this.$store.commit('globals/updateDownloadItemPart', itemPart)
     },
-    onQueueChanged(data) {
-      if (!data.hasWork) this.$store.commit('globals/clearItemDownloads')
+    async onQueueChanged(data) {
+      if (!data?.hasWork) {
+        try {
+          const res = await AbsDownloader.getDownloadQueue()
+          if (res?.queue?.length) {
+            this.$store.commit('globals/setItemDownloads', res.queue)
+          } else {
+            this.$store.commit('globals/clearItemDownloads')
+          }
+        } catch (e) {
+          const hasFailed = this.$store.state.globals.itemDownloads.some((i) => i.hasFailed)
+          if (!hasFailed) this.$store.commit('globals/clearItemDownloads')
+        }
+      }
     }
   },
   async mounted() {
@@ -87,12 +104,21 @@ export default {
     this.itemPartUpdateListener = await AbsDownloader.addListener('onDownloadItemPartUpdate', (data) => this.onDownloadItemPartUpdate(data))
     this.queueChangedListener = await AbsDownloader.addListener('onQueueChanged', (data) => this.onQueueChanged(data))
     this.completeListener = await AbsDownloader.addListener('onItemDownloadComplete', (data) => this.onItemDownloadComplete(data))
+    this.cancelledListener = await AbsDownloader.addListener('onDownloadItemCancelled', (data) => this.onDownloadItemCancelled(data))
+
+    try {
+      const res = await AbsDownloader.getDownloadQueue()
+      if (res?.queue?.length) {
+        this.$store.commit('globals/setItemDownloads', res.queue)
+      }
+    } catch (e) {}
   },
   beforeDestroy() {
     this.downloadItemListener?.remove()
     this.completeListener?.remove()
     this.itemPartUpdateListener?.remove()
     this.queueChangedListener?.remove()
+    this.cancelledListener?.remove()
   }
 }
 </script>

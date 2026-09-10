@@ -17,6 +17,7 @@
     --color-track-cursor: 229 231 235;
     --color-track: 107 114 128;
     --color-track-buffered: 75 85 99;
+    --color-accent: 26 214 145;
     --gradient-item-page: linear-gradient(169deg, rgba(0, 0, 0, 0.4) 0%, rgba(55, 56, 56, 1) 80%);
     --gradient-audio-player: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(38, 38, 38, 1) 80%);
     --gradient-minimized-audio-player: linear-gradient(145deg, rgba(38, 38, 38, 0.5) 0%, rgba(38, 38, 38, 0.9) 20%, rgb(38, 38, 38) 60%);
@@ -36,6 +37,7 @@
       --color-track-cursor: 229 231 235;
       --color-track: 107 114 128;
       --color-track-buffered: 75 85 99;
+      --color-accent: 26 214 145;
       --gradient-item-page: rgb(0, 0, 0);
       --gradient-audio-player: rgb(0, 0, 0);
       --gradient-minimized-audio-player: rgb(0, 0, 0);
@@ -55,9 +57,30 @@
     --color-track-cursor: var(--dynamic-accent-light, 208 188 255);
     --color-track: var(--dynamic-secondary, 74 69 78);
     --color-track-buffered: var(--dynamic-border, 54 52 59);
+    --color-accent: var(--dynamic-accent, 208 188 255);
     --gradient-item-page: linear-gradient(169deg, rgba(0, 0, 0, 0.4) 0%, rgb(var(--dynamic-primary, 43 41 45)) 80%);
     --gradient-audio-player: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgb(var(--dynamic-primary, 43 41 45)) 80%);
     --gradient-minimized-audio-player: linear-gradient(145deg, rgba(0, 0, 0, 0.5) 0%, rgb(var(--dynamic-primary, 43 41 45)) 60%);
+  }
+
+  html[data-theme='material-you-amoled'] {
+    color: white;
+    --color-bg: 0 0 0;
+    --color-bg-hover: 22 22 22;
+    --color-fg: 230 237 243;
+    --color-fg-muted: 130 135 140;
+    --color-primary: 0 0 0;
+    --color-secondary: 16 16 16;
+    --color-border: 45 45 45;
+    --color-bg-toggle: 0 0 0;
+    --color-bg-toggle-selected: 30 30 30;
+    --color-track-cursor: var(--dynamic-accent-light, 208 188 255);
+    --color-track: 60 60 60;
+    --color-track-buffered: 35 35 35;
+    --color-accent: var(--dynamic-accent, 208 188 255);
+    --gradient-item-page: rgb(0, 0, 0);
+    --gradient-audio-player: rgb(0, 0, 0);
+    --gradient-minimized-audio-player: rgb(0, 0, 0);
   }
 
   html[data-theme='nord'] {
@@ -74,6 +97,7 @@
     --color-track-cursor: 136 192 208;
     --color-track: 76 86 106;
     --color-track-buffered: 59 66 82;
+    --color-accent: 136 192 208;
     --gradient-item-page: linear-gradient(169deg, rgba(36, 41, 51, 0.4) 0%, rgba(46, 52, 64, 1) 80%);
     --gradient-audio-player: linear-gradient(180deg, rgba(36, 41, 51, 0) 0%, rgba(46, 52, 64, 1) 80%);
     --gradient-minimized-audio-player: linear-gradient(145deg, rgba(36, 41, 51, 0.5) 0%, rgba(46, 52, 64, 0.9) 20%, rgb(46, 52, 64) 60%);
@@ -93,6 +117,7 @@
     --color-track-cursor: 198 160 246;
     --color-track: 73 77 100;
     --color-track-buffered: 54 58 79;
+    --color-accent: 198 160 246;
     --gradient-item-page: linear-gradient(169deg, rgba(30, 32, 48, 0.4) 0%, rgba(36, 39, 58, 1) 80%);
     --gradient-audio-player: linear-gradient(180deg, rgba(30, 32, 48, 0) 0%, rgba(36, 39, 58, 1) 80%);
     --gradient-minimized-audio-player: linear-gradient(145deg, rgba(30, 32, 48, 0.5) 0%, rgba(36, 39, 58, 0.9) 20%, rgb(36, 39, 58) 60%);
@@ -112,6 +137,7 @@
     --color-track-cursor: 82 183 136;
     --color-track: 56 94 78;
     --color-track-buffered: 40 68 56;
+    --color-accent: 82 183 136;
     --gradient-item-page: linear-gradient(169deg, rgba(15, 26, 21, 0.4) 0%, rgba(20, 34, 28, 1) 80%);
     --gradient-audio-player: linear-gradient(180deg, rgba(15, 26, 21, 0) 0%, rgba(20, 34, 28, 1) 80%);
     --gradient-minimized-audio-player: linear-gradient(145deg, rgba(15, 26, 21, 0.5) 0%, rgba(20, 34, 28, 0.9) 20%, rgb(20, 34, 28) 60%);
@@ -131,6 +157,7 @@
     --color-track-cursor: 231 111 81;
     --color-track: 85 71 62;
     --color-track-buffered: 67 57 50;
+    --color-accent: 231 111 81;
     --gradient-item-page: linear-gradient(169deg, rgba(36, 30, 26, 0.4) 0%, rgba(46, 38, 33, 1) 80%);
     --gradient-audio-player: linear-gradient(180deg, rgba(36, 30, 26, 0) 0%, rgba(46, 38, 33, 1) 80%);
     --gradient-minimized-audio-player: linear-gradient(145deg, rgba(36, 30, 26, 0.5) 0%, rgba(46, 38, 33, 0.9) 20%, rgb(46, 38, 33) 60%);
@@ -150,9 +177,90 @@
     --color-track-cursor: 56 189 248;
     --color-track: 51 65 85;
     --color-track-buffered: 39 50 67;
+    --color-accent: 56 189 248;
     --gradient-item-page: linear-gradient(169deg, rgba(15, 23, 42, 0.4) 0%, rgba(24, 33, 47, 1) 80%);
     --gradient-audio-player: linear-gradient(180deg, rgba(15, 23, 42, 0) 0%, rgba(24, 33, 47, 1) 80%);
     --gradient-minimized-audio-player: linear-gradient(145deg, rgba(15, 23, 42, 0.5) 0%, rgba(24, 33, 47, 0.9) 20%, rgb(24, 33, 47) 60%);
+  }
+
+  html[data-theme='dracula'] {
+    color: #f8f8f2;
+    --color-bg: 40 42 54;
+    --color-bg-hover: 68 71 90;
+    --color-fg: 248 248 242;
+    --color-fg-muted: 189 147 249;
+    --color-primary: 33 34 44;
+    --color-secondary: 50 52 66;
+    --color-border: 68 71 90;
+    --color-bg-toggle: 40 42 54;
+    --color-bg-toggle-selected: 68 71 90;
+    --color-track-cursor: 255 121 198;
+    --color-track: 98 114 164;
+    --color-track-buffered: 68 71 90;
+    --color-accent: 189 147 249;
+    --gradient-item-page: linear-gradient(169deg, rgba(33, 34, 44, 0.4) 0%, rgba(40, 42, 54, 1) 80%);
+    --gradient-audio-player: linear-gradient(180deg, rgba(33, 34, 44, 0) 0%, rgba(40, 42, 54, 1) 80%);
+    --gradient-minimized-audio-player: linear-gradient(145deg, rgba(33, 34, 44, 0.5) 0%, rgba(40, 42, 54, 0.9) 20%, rgb(40, 42, 54) 60%);
+  }
+
+  html[data-theme='tokyo-night'] {
+    color: #c0caf5;
+    --color-bg: 26 27 38;
+    --color-bg-hover: 41 46 66;
+    --color-fg: 192 202 245;
+    --color-fg-muted: 122 162 247;
+    --color-primary: 22 22 30;
+    --color-secondary: 36 40 59;
+    --color-border: 59 66 97;
+    --color-bg-toggle: 26 27 38;
+    --color-bg-toggle-selected: 41 46 66;
+    --color-track-cursor: 125 207 255;
+    --color-track: 65 72 104;
+    --color-track-buffered: 41 46 66;
+    --color-accent: 125 207 255;
+    --gradient-item-page: linear-gradient(169deg, rgba(22, 22, 30, 0.4) 0%, rgba(26, 27, 38, 1) 80%);
+    --gradient-audio-player: linear-gradient(180deg, rgba(22, 22, 30, 0) 0%, rgba(26, 27, 38, 1) 80%);
+    --gradient-minimized-audio-player: linear-gradient(145deg, rgba(22, 22, 30, 0.5) 0%, rgba(26, 27, 38, 0.9) 20%, rgb(26, 27, 38) 60%);
+  }
+
+  html[data-theme='gruvbox'] {
+    color: #ebdbb2;
+    --color-bg: 40 40 40;
+    --color-bg-hover: 60 56 54;
+    --color-fg: 235 219 178;
+    --color-fg-muted: 168 153 132;
+    --color-primary: 29 32 33;
+    --color-secondary: 50 48 47;
+    --color-border: 80 73 69;
+    --color-bg-toggle: 40 40 40;
+    --color-bg-toggle-selected: 60 56 54;
+    --color-track-cursor: 250 189 47;
+    --color-track: 102 92 84;
+    --color-track-buffered: 60 56 54;
+    --color-accent: 250 189 47;
+    --gradient-item-page: linear-gradient(169deg, rgba(29, 32, 33, 0.4) 0%, rgba(40, 40, 40, 1) 80%);
+    --gradient-audio-player: linear-gradient(180deg, rgba(29, 32, 33, 0) 0%, rgba(40, 40, 40, 1) 80%);
+    --gradient-minimized-audio-player: linear-gradient(145deg, rgba(29, 32, 33, 0.5) 0%, rgba(40, 40, 40, 0.9) 20%, rgb(40, 40, 40) 60%);
+  }
+
+  html[data-theme='rose-pine'] {
+    color: #e0def4;
+    --color-bg: 25 23 36;
+    --color-bg-hover: 42 39 63;
+    --color-fg: 224 222 244;
+    --color-fg-muted: 144 140 170;
+    --color-primary: 20 18 29;
+    --color-secondary: 33 32 46;
+    --color-border: 57 53 82;
+    --color-bg-toggle: 25 23 36;
+    --color-bg-toggle-selected: 42 39 63;
+    --color-track-cursor: 235 188 186;
+    --color-track: 86 82 110;
+    --color-track-buffered: 57 53 82;
+    --color-accent: 235 188 186;
+    --gradient-item-page: linear-gradient(169deg, rgba(20, 18, 29, 0.4) 0%, rgba(25, 23, 36, 1) 80%);
+    --gradient-audio-player: linear-gradient(180deg, rgba(20, 18, 29, 0) 0%, rgba(25, 23, 36, 1) 80%);
+    --gradient-minimized-audio-player: linear-gradient(145deg, rgba(20, 18, 29, 0.5) 0%, rgba(25, 23, 36, 0.9) 20%, rgb(25, 23, 36) 60%);
   }
 
   html[data-theme='light'] {
@@ -169,6 +277,7 @@
     --color-track-cursor: 101 109 118;
     --color-track: 189 191 191;
     --color-track-buffered: 129 131 131;
+    --color-accent: 26 214 145;
     --gradient-item-page: linear-gradient(169deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 1) 80%);
     --gradient-audio-player: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 80%);
     --gradient-minimized-audio-player: linear-gradient(145deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.9) 20%, rgb(255, 255, 255) 60%);

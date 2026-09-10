@@ -278,7 +278,7 @@ export default ({ store, app }, inject) => {
   const applyTheme = async (theme) => {
     if (!theme) return
     document.documentElement.dataset.theme = theme
-    if (theme === 'material-you') {
+    if (theme === 'material-you' || theme === 'material-you-amoled') {
       try {
         const colors = await AbsThemePlugin.getDynamicColors()
         if (colors?.isAvailable) {
@@ -295,8 +295,28 @@ export default ({ store, app }, inject) => {
         console.warn('[Theme] Could not load dynamic colors', e)
       }
     }
+
+    try {
+      const customAccent = await app.$localStore?.getCustomAccent()
+      if (customAccent) {
+        document.documentElement.style.setProperty('--color-accent', customAccent)
+      } else {
+        document.documentElement.style.removeProperty('--color-accent')
+      }
+    } catch (e) {
+      console.warn('[Theme] Could not apply custom accent', e)
+    }
   }
   inject('applyTheme', applyTheme)
+
+  const applyCustomAccent = (accent) => {
+    if (accent) {
+      document.documentElement.style.setProperty('--color-accent', accent)
+    } else {
+      document.documentElement.style.removeProperty('--color-accent')
+    }
+  }
+  inject('applyCustomAccent', applyCustomAccent)
 
   app.$localStore?.getTheme()?.then((theme) => {
     if (theme) {

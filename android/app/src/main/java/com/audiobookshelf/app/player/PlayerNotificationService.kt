@@ -1158,13 +1158,17 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   //
   private val VALID_MEDIA_BROWSERS =
           mutableListOf(
+                  "com.CharcuterieShelf",
+                  "com.CharcuterieShelf.debug",
                   "com.audiobookshelf.app",
                   "com.audiobookshelf.app.debug",
                   ANDROID_AUTO_PKG_NAME,
                   ANDROID_AUTO_SIMULATOR_PKG_NAME,
                   ANDROID_WEARABLE_PKG_NAME,
                   ANDROID_GSEARCH_PKG_NAME,
-                  ANDROID_AUTOMOTIVE_PKG_NAME
+                  ANDROID_AUTOMOTIVE_PKG_NAME,
+                  "com.google.android.apps.auto.carservice",
+                  "com.android.bluetooth"
           )
 
   private val AUTO_MEDIA_ROOT = "/"
@@ -1198,8 +1202,11 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   //  normal loading of audiobooks is handled in webview (not natively)
   private fun isValid(packageName: String, uid: Int): Boolean {
     Log.d(tag, "onGetRoot: Checking package $packageName with uid $uid")
+    if (uid == android.os.Process.myUid() || packageName == this.packageName) {
+      return true
+    }
     if (!VALID_MEDIA_BROWSERS.contains(packageName)) {
-      Log.d(tag, "onGetRoot: package $packageName not valid for the media browser service")
+      Log.w(tag, "onGetRoot: package $packageName not in valid media browsers whitelist")
       return false
     }
     return true

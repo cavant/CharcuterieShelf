@@ -113,6 +113,10 @@ class DbManager {
     Paper.book("downloadItems").delete(downloadItemId)
   }
 
+  fun getDownloadItem(downloadItemId: String): DownloadItem? {
+    return Paper.book("downloadItems").read(downloadItemId)
+  }
+
   fun getDownloadItems(): List<DownloadItem> {
     val downloadItems: MutableList<DownloadItem> = mutableListOf()
     Paper.book("downloadItems").allKeys.forEach { downloadItemId ->

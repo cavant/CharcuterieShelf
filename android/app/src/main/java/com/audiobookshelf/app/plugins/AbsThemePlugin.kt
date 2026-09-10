@@ -33,8 +33,9 @@ class AbsThemePlugin : Plugin() {
         val neutral500 = ContextCompat.getColor(ctx, android.R.color.system_neutral2_500)
 
         ret.put("isAvailable", true)
-        ret.put("accent", colorToRgbString(accent1))
+        ret.put("accent", colorToRgbString(accent1Light))
         ret.put("accentLight", colorToRgbString(accent1Light))
+        ret.put("accent500", colorToRgbString(accent1))
         ret.put("bg", colorToRgbString(neutral900))
         ret.put("primary", colorToRgbString(neutral800))
         ret.put("secondary", colorToRgbString(neutral700))

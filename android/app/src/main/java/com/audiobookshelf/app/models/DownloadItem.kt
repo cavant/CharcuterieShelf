@@ -30,6 +30,12 @@ data class DownloadItem(
   val isDownloadFinished
     get() = !downloadItemParts.any { !it.completed || it.isMoving || it.failed }
 
+  val hasFailed: Boolean
+    get() = terminalFailureAt != null || downloadItemParts.any { it.failed }
+
+  val isPending: Boolean
+    get() = !isDownloadFinished && !hasFailed
+
   @JsonIgnore
   fun getNextDownloadItemParts(limit: Int): MutableList<DownloadItemPart> {
     val itemParts = mutableListOf<DownloadItemPart>()
