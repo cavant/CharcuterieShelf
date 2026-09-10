@@ -41,6 +41,14 @@ export default {
             text: this.$strings.ButtonHome
           },
           {
+            to: '/bookshelf/favorites',
+            routeName: 'bookshelf-favorites',
+            iconPack: 'material-symbols',
+            icon: 'star',
+            iconClass: 'text-xl',
+            text: this.$strings.ButtonFavorites || 'Favorites'
+          },
+          {
             to: '/bookshelf/latest',
             routeName: 'bookshelf-latest',
             iconPack: 'abs-icons',

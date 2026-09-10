@@ -1,6 +1,6 @@
 {
   "name": "charcuterieshelf",
-  "version": "0.14.4-beta",
+  "version": "0.14.5-beta",
   "description": "CharcuterieShelf - Self-hosted audiobooks and podcast player with Material You, custom themes, and Pocket Casts playback features",
   "author": "TheMagicSalami",
   "scripts": {

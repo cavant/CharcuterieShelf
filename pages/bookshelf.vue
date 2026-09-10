@@ -16,7 +16,7 @@ export default {
   },
   computed: {
     hideToolbar() {
-      return this.isHome || this.isLatest || this.isPodcastSearch
+      return this.isHome || this.isLatest || this.isPodcastSearch || this.isFavorites
     },
     isHome() {
       return this.$route.name === 'bookshelf'
@@ -26,6 +26,9 @@ export default {
     },
     isPodcastSearch() {
       return this.$route.name === 'bookshelf-add-podcast'
+    },
+    isFavorites() {
+      return this.$route.name === 'bookshelf-favorites'
     }
   }
 }

@@ -38,7 +38,18 @@ export default {
       showDetailsModal: false,
       showSendEbookDevicesModal: false,
       showEditItemModal: false,
-      editItemInitialTab: 'details'
+      editItemInitialTab: 'details',
+      isFavorite: false
+    }
+  },
+  watch: {
+    show: {
+      immediate: true,
+      async handler(val) {
+        if (val && this.isPodcast && !this.episode) {
+          this.checkFavorite()
+        }
+      }
     }
   },
   computed: {
@@ -116,6 +127,14 @@ export default {
           text: this.rssFeed ? this.$strings.HeaderRSSFeed : this.$strings.HeaderOpenRSSFeed,
           value: 'rssFeed',
           icon: 'rss_feed'
+        })
+      }
+
+      if (this.isPodcast && !this.episode) {
+        items.push({
+          text: this.isFavorite ? 'Remove from Favorites' : 'Add to Favorites',
+          value: 'toggleFavorite',
+          icon: 'star'
         })
       }
 
@@ -340,7 +359,30 @@ export default {
       } else if (action === 'editCover') {
         this.editItemInitialTab = 'cover'
         this.showEditItemModal = true
+      } else if (action === 'toggleFavorite') {
+        this.toggleFavorite()
       }
+    },
+    async checkFavorite() {
+      const userId = this.$store.state.user.user?.id
+      const serverAddress = this.$store.getters['user/getServerAddress']
+      const itemId = this.serverLibraryItemId || this.libraryItem?.id
+      if (!userId || !serverAddress || !itemId) return
+      this.isFavorite = await this.$localStore.isUserPodcastFavorite(userId, serverAddress, itemId)
+    },
+    async toggleFavorite() {
+      await this.$hapticsImpact()
+      const userId = this.$store.state.user.user?.id
+      const serverAddress = this.$store.getters['user/getServerAddress']
+      const itemId = this.serverLibraryItemId || this.libraryItem?.id
+      if (!userId || !serverAddress || !itemId) return
+      this.isFavorite = await this.$localStore.toggleUserPodcastFavorite(userId, serverAddress, itemId)
+      if (this.isFavorite) {
+        this.$toast.success(this.$strings.LabelFavorited || 'Added to Favorites')
+      } else {
+        this.$toast.info('Removed from Favorites')
+      }
+      this.$eventBus.$emit('podcast-favorites-changed')
     },
     onItemUpdated(updatedItem) {
       this.$emit('updated', updatedItem)

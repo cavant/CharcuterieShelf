@@ -250,6 +250,76 @@ class LocalStorage {
     const filtered = subs.filter(id => id !== itemId)
     await this.setUserPodcastSubscriptions(userId, serverAddress, filtered)
   }
+
+  // ── Per-User Podcast Favorites Management ────────────────────────────
+  // Each user on each server has their own ordered list of favorite podcasts.
+  // Key format: podcast_favs_<serverAddress>_<userId>
+  // Value: JSON array of library item IDs in custom user-specified order
+
+  _favKey(userId, serverAddress) {
+    const serverConfig = this.vuexStore?.state?.user?.serverConnectionConfig
+    const stableId = serverConfig?.id || serverConfig?.remoteAddress || serverAddress || ''
+    const addr = stableId.replace(/\/+$/, '').toLowerCase()
+    return `podcast_favs_${addr}_${userId}`
+  }
+
+  async getUserPodcastFavorites(userId, serverAddress) {
+    if (!userId || !serverAddress) return []
+    try {
+      const obj = await Preferences.get({ key: this._favKey(userId, serverAddress) }) || {}
+      return obj.value ? JSON.parse(obj.value) : []
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get podcast favorites', error)
+      return []
+    }
+  }
+
+  async setUserPodcastFavorites(userId, serverAddress, itemIds) {
+    if (!userId || !serverAddress) return
+    try {
+      await Preferences.set({ key: this._favKey(userId, serverAddress), value: JSON.stringify(itemIds || []) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set podcast favorites', error)
+    }
+  }
+
+  async isUserPodcastFavorite(userId, serverAddress, itemId) {
+    if (!userId || !serverAddress || !itemId) return false
+    const favs = await this.getUserPodcastFavorites(userId, serverAddress)
+    return favs.includes(itemId)
+  }
+
+  async toggleUserPodcastFavorite(userId, serverAddress, itemId) {
+    if (!userId || !serverAddress || !itemId) return false
+    const favs = await this.getUserPodcastFavorites(userId, serverAddress)
+    const index = favs.indexOf(itemId)
+    let isFav = false
+    if (index > -1) {
+      favs.splice(index, 1)
+      isFav = false
+    } else {
+      favs.push(itemId)
+      isFav = true
+    }
+    await this.setUserPodcastFavorites(userId, serverAddress, favs)
+    return isFav
+  }
+
+  async addUserPodcastFavorite(userId, serverAddress, itemId) {
+    if (!userId || !serverAddress || !itemId) return
+    const favs = await this.getUserPodcastFavorites(userId, serverAddress)
+    if (!favs.includes(itemId)) {
+      favs.push(itemId)
+      await this.setUserPodcastFavorites(userId, serverAddress, favs)
+    }
+  }
+
+  async removeUserPodcastFavorite(userId, serverAddress, itemId) {
+    if (!userId || !serverAddress || !itemId) return
+    const favs = await this.getUserPodcastFavorites(userId, serverAddress)
+    const filtered = favs.filter(id => id !== itemId)
+    await this.setUserPodcastFavorites(userId, serverAddress, filtered)
+  }
 }
 
 

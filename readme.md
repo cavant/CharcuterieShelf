@@ -120,6 +120,10 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 - **Full RSS Feed Inline Browsing**: Automatically loads the entire podcast RSS catalog inline without opening separate modals. Tap any episode row to instantly view show notes and full description.
 - **Downloaded-First Smart Floating Sort**: Downloaded episodes automatically float to the top of the episode list with a visual section divider, followed by all remaining episodes.
 - **Flexible Pocket Casts Episode Sorting**: Sort episodes Newest to Oldest, Oldest to Newest, Shortest to Longest (Duration), Longest to Shortest, Title A→Z, Title Z→A, Season, and Episode Number.
+- **Podcast Favorites & Custom Reorder Grid**: Dedicated **Favorites** tab under the Podcasts section featuring a 3-column Pocket Casts-style cover art grid. Shows display circular unplayed episode count badges in the top-right corner, and can be freely reordered by drag-and-drop into any custom arrangement with instant persistence per user.
+- **1-Tap Favorite Toggle**: Star or unstar any podcast show directly from its item details screen or item more menu, with instant sync across all views.
+- **Dedicated Reorder Mode & Batch Picker**: Toggle Reorder mode to easily drag icons or tap quick-remove badges, filter shows with instant search, or open the batch Add Favorites modal to multi-select shows from your library.
+- **1-Tap Seeding from Subscriptions**: When starting with an empty favorites shelf, 1-tap "Add Subscribed Shows" automatically populates your favorites grid so you can immediately arrange your top podcasts.
 - **Trim Silence**: Real-time silence skipping powered by ExoPlayer's native audio pipeline—no gaps, no pitch changes.
 - **Intro & Outro Skipping**: Set custom skip durations per podcast show (e.g. skip first 45s of intro ads, skip last 30s of credits).
 - **Per-Show Playback Speeds**: Automatically remembers your preferred listening speed for each podcast independently.

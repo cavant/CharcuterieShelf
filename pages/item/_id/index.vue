@@ -67,6 +67,10 @@
               <span class="material-symbols text-2xl" :class="isSubscribed ? 'fill text-white' : 'text-fg-muted'">{{ isSubscribed ? 'check_circle' : 'add_circle' }}</span>
               <span class="px-1 text-xs font-semibold">{{ isSubscribed ? 'Subscribed' : 'Subscribe' }}</span>
             </ui-btn>
+            <!-- Favorite Podcast Toggle -->
+            <ui-btn v-if="isPodcast" :color="isFavorite ? 'warning' : 'primary'" class="flex items-center justify-center mx-1" :padding-x="2.5" :title="isFavorite ? 'Favorited' : 'Favorite'" @click="togglePodcastFavorite">
+              <span class="material-symbols text-2xl" :class="isFavorite ? 'fill text-amber-400' : 'text-fg-muted'">star</span>
+            </ui-btn>
             <ui-btn v-if="canEdit" color="primary" class="flex items-center justify-center mx-1" :padding-x="2" :title="$strings.HeaderEditItem" @click="editButtonPress">
               <span class="material-symbols text-2xl">edit</span>
             </ui-btn>
@@ -234,7 +238,8 @@ export default {
       startingDownload: false,
       showEditModal: false,
       editModalTab: 'details',
-      isSubscribed: true
+      isSubscribed: true,
+      isFavorite: false
     }
   },
   mixins: [cellularPermissionHelpers],
@@ -787,6 +792,21 @@ export default {
       }
       this.$eventBus.$emit('podcast-subscription-changed')
     },
+    async checkFavoriteStatus() {
+      if (!this.isPodcast || !this.user?.id || !this.currentServerAddress || !this.libraryItemId) return
+      this.isFavorite = await this.$localStore.isUserPodcastFavorite(this.user.id, this.currentServerAddress, this.libraryItemId)
+    },
+    async togglePodcastFavorite() {
+      if (!this.user?.id || !this.currentServerAddress || !this.libraryItemId) return
+      await this.$hapticsImpact()
+      this.isFavorite = await this.$localStore.toggleUserPodcastFavorite(this.user.id, this.currentServerAddress, this.libraryItemId)
+      if (this.isFavorite) {
+        this.$toast.success(`Added "${this.title}" to Favorites`)
+      } else {
+        this.$toast.info(`Removed "${this.title}" from Favorites`)
+      }
+      this.$eventBus.$emit('podcast-favorites-changed')
+    },
     async setLibrary() {
       if (!this.libraryItem.libraryId) return
       await this.$store.dispatch('libraries/fetch', this.libraryItem.libraryId)
@@ -808,7 +828,9 @@ export default {
 
       if (this.isPodcast) {
         this.checkSubscriptionStatus()
+        this.checkFavoriteStatus()
         this.$eventBus.$on('podcast-subscription-changed', this.checkSubscriptionStatus)
+        this.$eventBus.$on('podcast-favorites-changed', this.checkFavoriteStatus)
       }
 
       this.checkDescriptionClamped()
@@ -859,6 +881,7 @@ export default {
     this.$socket.$off('rss_feed_open', this.rssFeedOpen)
     this.$socket.$off('rss_feed_closed', this.rssFeedClosed)
     this.$eventBus.$off('podcast-subscription-changed', this.checkSubscriptionStatus)
+    this.$eventBus.$off('podcast-favorites-changed', this.checkFavoriteStatus)
 
     // Set scroll position
     if (window['item-page']) {
