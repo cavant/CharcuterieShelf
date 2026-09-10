@@ -272,13 +272,17 @@ Ensure your changes are release-ready across all layers:
 # Run the entire full-stack QA suite (all 10 verification suites)
 npm run test:qa
 
+# Run full end-to-end compilation + verification (Nuxt bundle + Android native sources)
+npm run test:full
+
 # Or run specific test targets:
-npm test              # Frontend unit tests (semver, duration, favorites, theming, queue)
-npm run test:i18n     # i18n syntax & ASCII sort check
-npm run test:branding # Package ID, custom URL scheme, and native manifests
-npm run test:github   # CI/CD workflows and issue templates
-npm run test:build    # Static Nuxt bundle pre-rendering health
-npm run test:android  # Gradle wrapper and SDK prerequisites
+npm test                  # Frontend unit tests (semver, duration, favorites, theming, queue)
+npm run test:i18n         # i18n syntax & ASCII sort check
+npm run test:branding     # Package ID, custom URL scheme, and native manifests
+npm run test:github       # CI/CD workflows and issue templates
+npm run test:build        # Static Nuxt bundle pre-rendering health
+npm run test:android      # Gradle wrapper, Java 21, and Android SDK prerequisites
+npm run test:android:compile # Execute native Android gradle compilation
 ```
 Reusable Antigravity QA Skill: `.agents/skills/charcuterieshelf-qa-review/SKILL.md`
 

@@ -25,6 +25,15 @@ describe('In-App Update Checker & Semver Engine', () => {
     assert.strictEqual(v3.preNum, 2);
   });
 
+  test('parseSemver strips build metadata correctly', () => {
+    const v = parseSemver('0.14.7-beta.1+build.123');
+    assert.strictEqual(v.major, 0);
+    assert.strictEqual(v.minor, 14);
+    assert.strictEqual(v.patch, 7);
+    assert.strictEqual(v.pre, 'beta.1');
+    assert.strictEqual(v.preNum, 1);
+  });
+
   test('parseSemver gracefully handles edge cases and invalid input', () => {
     const empty = parseSemver('');
     assert.strictEqual(empty.major, 0);
@@ -65,6 +74,20 @@ describe('In-App Update Checker & Semver Engine', () => {
   test('isNewerVersion correctly resolves numbered prereleases', () => {
     assert.strictEqual(isNewerVersion('0.14.5-beta1', '0.14.5-beta2'), true);
     assert.strictEqual(isNewerVersion('0.14.5-beta2', '0.14.5-beta1'), false);
+  });
+
+  test('isNewerVersion correctly resolves prerelease lifecycle stages (alpha < beta < rc)', () => {
+    // RC is newer than Beta even if Beta has a higher numeric suffix
+    assert.strictEqual(isNewerVersion('0.14.7-beta2', '0.14.7-rc1'), true);
+    assert.strictEqual(isNewerVersion('0.14.7-rc1', '0.14.7-beta2'), false);
+
+    // Beta is newer than Alpha even if Alpha has a higher numeric suffix
+    assert.strictEqual(isNewerVersion('0.14.7-alpha2', '0.14.7-beta1'), true);
+    assert.strictEqual(isNewerVersion('0.14.7-beta1', '0.14.7-alpha2'), false);
+
+    // RC is newer than plain beta
+    assert.strictEqual(isNewerVersion('0.14.7-beta', '0.14.7-rc'), true);
+    assert.strictEqual(isNewerVersion('0.14.7-rc', '0.14.7-beta'), false);
   });
 
   test('Release asset selection strictly filters for Android APKs', () => {

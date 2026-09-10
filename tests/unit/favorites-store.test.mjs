@@ -1,72 +1,37 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
+import { LocalStorage } from '../../plugins/localStore.js';
 
-// Simulation of LocalStorage key resolution and store operations from plugins/localStore.js
-class MockFavoritesStore {
-  constructor(serverConfig = null) {
-    this.serverConfig = serverConfig;
-    this.storage = new Map();
+class MemoryPreferencesAdapter {
+  constructor() {
+    this.map = new Map();
   }
-
-  _favKey(userId, serverAddress) {
-    const stableId = this.serverConfig?.id || this.serverConfig?.remoteAddress || serverAddress || '';
-    const addr = stableId.replace(/\/+$/, '').toLowerCase();
-    return `podcast_favs_${addr}_${userId}`;
+  async get({ key }) {
+    return { value: this.map.has(key) ? this.map.get(key) : null };
   }
-
-  _subKey(userId, serverAddress) {
-    const stableId = this.serverConfig?.id || this.serverConfig?.remoteAddress || serverAddress || '';
-    const addr = stableId.replace(/\/+$/, '').toLowerCase();
-    return `podcast_subs_${addr}_${userId}`;
+  async set({ key, value }) {
+    this.map.set(key, String(value));
   }
-
-  async getUserPodcastFavorites(userId, serverAddress) {
-    if (!userId || !serverAddress) return [];
-    const val = this.storage.get(this._favKey(userId, serverAddress));
-    return val ? JSON.parse(val) : [];
-  }
-
-  async setUserPodcastFavorites(userId, serverAddress, itemIds) {
-    if (!userId || !serverAddress) return;
-    this.storage.set(this._favKey(userId, serverAddress), JSON.stringify(itemIds || []));
-  }
-
-  async toggleUserPodcastFavorite(userId, serverAddress, itemId) {
-    if (!userId || !serverAddress || !itemId) return false;
-    const favs = await this.getUserPodcastFavorites(userId, serverAddress);
-    const index = favs.indexOf(itemId);
-    let isFav = false;
-    if (index > -1) {
-      favs.splice(index, 1);
-      isFav = false;
-    } else {
-      favs.push(itemId);
-      isFav = true;
-    }
-    await this.setUserPodcastFavorites(userId, serverAddress, favs);
-    return isFav;
-  }
-
-  async addPodcastFavorite(userId, serverAddress, itemId) {
-    if (!userId || !serverAddress || !itemId) return;
-    const favs = await this.getUserPodcastFavorites(userId, serverAddress);
-    if (!favs.includes(itemId)) {
-      favs.push(itemId);
-      await this.setUserPodcastFavorites(userId, serverAddress, favs);
-    }
-  }
-
-  async removePodcastFavorite(userId, serverAddress, itemId) {
-    if (!userId || !serverAddress || !itemId) return;
-    const favs = await this.getUserPodcastFavorites(userId, serverAddress);
-    const filtered = favs.filter((id) => id !== itemId);
-    await this.setUserPodcastFavorites(userId, serverAddress, filtered);
+  async remove({ key }) {
+    this.map.delete(key);
   }
 }
 
-describe('Podcast Favorites & Subscriptions Store Engine', () => {
+function createStore(serverConfig = null) {
+  const vuexStore = {
+    state: {
+      user: {
+        serverConnectionConfig: serverConfig
+      }
+    }
+  };
+  const adapter = new MemoryPreferencesAdapter();
+  return new LocalStorage(vuexStore, adapter);
+}
+
+describe('Podcast Favorites & Subscriptions Store Engine (plugins/localStore.js)', () => {
   test('Key generator provides strict per-user and per-server isolation', () => {
-    const store = new MockFavoritesStore();
+    const store = createStore();
 
     const user1ServerA = store._favKey('user-1', 'https://audio.example.com');
     const user2ServerA = store._favKey('user-2', 'https://audio.example.com');
@@ -81,7 +46,7 @@ describe('Podcast Favorites & Subscriptions Store Engine', () => {
   });
 
   test('Key generator prioritizes server connection config ID', () => {
-    const store = new MockFavoritesStore({ id: 'stable-server-uuid', remoteAddress: 'https://wan.com' });
+    const store = createStore({ id: 'stable-server-uuid', remoteAddress: 'https://wan.com' });
     const keyWithLan = store._favKey('user-1', 'http://192.168.1.50:13378');
     const keyWithWan = store._favKey('user-1', 'https://wan.com');
 
@@ -91,7 +56,7 @@ describe('Podcast Favorites & Subscriptions Store Engine', () => {
   });
 
   test('Favorites CRUD and toggle operations maintain correct array order', async () => {
-    const store = new MockFavoritesStore();
+    const store = createStore();
     const userId = 'tester-42';
     const server = 'https://media.test';
 
@@ -100,17 +65,17 @@ describe('Podcast Favorites & Subscriptions Store Engine', () => {
     assert.deepStrictEqual(favs, []);
 
     // Add first item
-    await store.addPodcastFavorite(userId, server, 'show-1');
+    await store.addUserPodcastFavorite(userId, server, 'show-1');
     favs = await store.getUserPodcastFavorites(userId, server);
     assert.deepStrictEqual(favs, ['show-1']);
 
     // Add second item
-    await store.addPodcastFavorite(userId, server, 'show-2');
+    await store.addUserPodcastFavorite(userId, server, 'show-2');
     favs = await store.getUserPodcastFavorites(userId, server);
     assert.deepStrictEqual(favs, ['show-1', 'show-2']);
 
     // Duplicate add does not duplicate
-    await store.addPodcastFavorite(userId, server, 'show-1');
+    await store.addUserPodcastFavorite(userId, server, 'show-1');
     favs = await store.getUserPodcastFavorites(userId, server);
     assert.deepStrictEqual(favs, ['show-1', 'show-2']);
 
@@ -127,13 +92,34 @@ describe('Podcast Favorites & Subscriptions Store Engine', () => {
     assert.deepStrictEqual(favs, ['show-2', 'show-3']);
 
     // Remove item
-    await store.removePodcastFavorite(userId, server, 'show-2');
+    await store.removeUserPodcastFavorite(userId, server, 'show-2');
     favs = await store.getUserPodcastFavorites(userId, server);
     assert.deepStrictEqual(favs, ['show-3']);
   });
 
+  test('Subscription operations isolate subscriptions per user and server', async () => {
+    const store = createStore();
+    const userId = 'tester-99';
+    const server = 'https://podcast.homelab';
+
+    let subs = await store.getUserPodcastSubscriptions(userId, server);
+    assert.strictEqual(subs, null);
+
+    await store.addUserPodcastSubscription(userId, server, 'pod-1');
+    subs = await store.getUserPodcastSubscriptions(userId, server);
+    assert.deepStrictEqual(subs, ['pod-1']);
+
+    await store.addUserPodcastSubscription(userId, server, 'pod-2');
+    subs = await store.getUserPodcastSubscriptions(userId, server);
+    assert.deepStrictEqual(subs, ['pod-1', 'pod-2']);
+
+    await store.removeUserPodcastSubscription(userId, server, 'pod-1');
+    subs = await store.getUserPodcastSubscriptions(userId, server);
+    assert.deepStrictEqual(subs, ['pod-2']);
+  });
+
   test('Drag-and-drop reordering preserves elements and updates stored order', async () => {
-    const store = new MockFavoritesStore();
+    const store = createStore();
     const userId = 'tester-42';
     const server = 'https://media.test';
 
@@ -152,7 +138,7 @@ describe('Podcast Favorites & Subscriptions Store Engine', () => {
     assert.deepStrictEqual(persisted, ['show-d', 'show-a', 'show-b', 'show-c']);
   });
 
-  test('Unplayed count badge helper formats correctly', () => {
+  test('Unplayed count badge helper formatting matching favorites.vue', () => {
     const getBadge = (count) => {
       if (!count || count <= 0) return null;
       return count > 99 ? '99' : String(count);

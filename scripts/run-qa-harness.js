@@ -12,7 +12,7 @@
  * - Android Gradle environment and build readiness
  *
  * Usage:
- *   node scripts/run-qa-harness.js [--all | --unit | --i18n | --branding | --github | --build | --android | --compile]
+ *   node scripts/run-qa-harness.js [--all | --unit | --i18n | --branding | --github | --build | --android | --compile | --compile-android | --full]
  */
 
 const { spawnSync } = require('child_process');
@@ -20,14 +20,16 @@ const path = require('path');
 const fs = require('fs');
 
 const args = process.argv.slice(2);
-const runAll = args.length === 0 || args.includes('--all');
+const runFull = args.includes('--full');
+const runCompile = runFull || args.includes('--compile');
+const runCompileAndroid = runFull || args.includes('--compile-android');
+const runAll = args.length === 0 || args.includes('--all') || runFull;
 const runUnit = runAll || args.includes('--unit');
 const runI18n = runAll || args.includes('--i18n');
 const runBranding = runAll || args.includes('--branding');
 const runGithub = runAll || args.includes('--github');
-const runBuild = runAll || args.includes('--build');
-const runAndroid = runAll || args.includes('--android');
-const runCompile = args.includes('--compile');
+const runBuild = runAll || args.includes('--build') || runCompile;
+const runAndroid = runAll || args.includes('--android') || runCompileAndroid;
 
 const rootDir = path.resolve(__dirname, '..');
 
@@ -103,6 +105,31 @@ async function run() {
     const gen = spawnSync('npm', ['run', 'generate'], { cwd: rootDir, stdio: 'inherit', shell: true });
     if (gen.status !== 0) {
       console.error(`${colors.red}❌ Nuxt compilation failed!${colors.reset}`);
+      process.exit(1);
+    }
+  }
+
+  if (runCompileAndroid) {
+    console.log(`${colors.bold}${colors.magenta}>>> Step 2: Compiling Android Debug Sources (gradlew compileDebugSources -p android)...${colors.reset}`);
+    let grad;
+    if (process.platform === 'win32') {
+      const psCommand = '$env:JAVA_HOME = "C:\\Java\\jdk-21"; $env:Path = "C:\\Java\\jdk-21\\bin;" + $env:Path; .\\android\\gradlew.bat compileDebugSources -p android --no-daemon';
+      grad = spawnSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psCommand], {
+        cwd: rootDir,
+        stdio: 'inherit'
+      });
+    } else {
+      grad = spawnSync('./android/gradlew', ['compileDebugSources', '-p', 'android', '--no-daemon'], {
+        cwd: rootDir,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          JAVA_HOME: process.env.JAVA_HOME
+        }
+      });
+    }
+    if (grad.status !== 0) {
+      console.error(`${colors.red}❌ Android compilation failed!${colors.reset}`);
       process.exit(1);
     }
   }

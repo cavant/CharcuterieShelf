@@ -35,6 +35,9 @@ jobs:
       - name: build Nuxt project
         run: npm run generate
 
+      - name: run QA verification test harness
+        run: node scripts/run-qa-harness.js --all
+
       - name: copy to Android project
         run: npx cap sync
 

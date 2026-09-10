@@ -50,25 +50,33 @@ npm run test:qa
 # or
 node scripts/run-qa-harness.js --all
 
-# 2. Run frontend unit tests only
+# 2. Run full end-to-end compilation + verification (Nuxt generate + Android compileDebugSources)
+npm run test:full
+# or
+node scripts/run-qa-harness.js --full
+
+# 3. Run frontend unit tests only
 npm test
 # or
 node scripts/run-qa-harness.js --unit
 
-# 3. Run localization checks
+# 4. Run localization checks
 npm run test:i18n
 
-# 4. Run branding and manifest integrity checks
+# 5. Run branding and manifest integrity checks
 npm run test:branding
 
-# 5. Run GitHub Actions workflow & template validation
+# 6. Run GitHub Actions workflow & template validation
 npm run test:github
 
-# 6. Verify static Nuxt bundle compilation
+# 7. Verify static Nuxt bundle compilation
 npm run test:build
 
-# 7. Verify Android build environment and prerequisites
+# 8. Verify Android build environment and prerequisites
 npm run test:android
+
+# 9. Execute native Android gradle debug compilation
+npm run test:android:compile
 ```
 
 ---

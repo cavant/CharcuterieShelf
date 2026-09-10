@@ -1,43 +1,33 @@
 import assert from 'node:assert/strict';
 import { test, describe } from 'node:test';
-
-// Simulation of backoff and URL resolution logic from DownloadItemManager.kt / InternalDownloadManager.kt
-function calculateRetryDelayMs(retryCount) {
-  const baseDelayMs = 2000;
-  const maxDelayMs = 32000;
-  const factor = Math.pow(2, Math.max(0, retryCount - 1));
-  return Math.min(baseDelayMs * factor, maxDelayMs);
-}
-
-function resolveDownloadUrl(serverBaseUrl, serverPath) {
-  if (!serverPath) return '';
-  if (serverPath.startsWith('http://') || serverPath.startsWith('https://')) {
-    return serverPath;
-  }
-  const base = serverBaseUrl.replace(/\/+$/, '');
-  const path = serverPath.startsWith('/') ? serverPath : `/${serverPath}`;
-  return `${base}${path}`;
-}
-
-function shouldAttachBearerToken(requestUrl, serverAddress) {
-  try {
-    const reqHost = new URL(requestUrl).host.toLowerCase();
-    const srvHost = new URL(serverAddress).host.toLowerCase();
-    return reqHost === srvHost;
-  } catch {
-    return false;
-  }
-}
+import {
+  MAX_DOWNLOAD_RETRIES,
+  calculateRetryDelayMs,
+  resolveDownloadUrl,
+  shouldAttachBearerToken,
+  isItemFailed,
+  isItemActive,
+  getFailedPartsCount,
+  getQueueCounts
+} from '../../utils/downloadQueueUtils.js';
 
 describe('Resilient Download Manager & Queue Recovery Engine', () => {
-  test('calculateRetryDelayMs implements exponential backoff up to 32s cap', () => {
-    assert.strictEqual(calculateRetryDelayMs(1), 2000);  // 2s
-    assert.strictEqual(calculateRetryDelayMs(2), 4000);  // 4s
-    assert.strictEqual(calculateRetryDelayMs(3), 8000);  // 8s
-    assert.strictEqual(calculateRetryDelayMs(4), 16000); // 16s
-    assert.strictEqual(calculateRetryDelayMs(5), 32000); // 32s
-    assert.strictEqual(calculateRetryDelayMs(6), 32000); // capped at 32s
-    assert.strictEqual(calculateRetryDelayMs(10), 32000); // capped at 32s
+  test('calculateRetryDelayMs matches Kotlin DownloadItemManager.kt exponential backoff and cap', () => {
+    // Exact Kotlin: (1000L * (1 shl (part.retryCount - 1))).coerceAtMost(30000L)
+    assert.strictEqual(calculateRetryDelayMs(1), 1000);  // 1s
+    assert.strictEqual(calculateRetryDelayMs(2), 2000);  // 2s
+    assert.strictEqual(calculateRetryDelayMs(3), 4000);  // 4s
+    assert.strictEqual(calculateRetryDelayMs(4), 8000);  // 8s
+    assert.strictEqual(calculateRetryDelayMs(5), 16000); // 16s
+
+    // Max retries is 5 in DownloadItemManager.kt: retry 6+ is terminal failure
+    assert.strictEqual(MAX_DOWNLOAD_RETRIES, 5);
+    assert.strictEqual(calculateRetryDelayMs(6), null, 'Exceeding MAX_RETRIES must yield null (terminal failure)');
+    assert.strictEqual(calculateRetryDelayMs(10), null);
+
+    // Edge cases
+    assert.strictEqual(calculateRetryDelayMs(0), 0);
+    assert.strictEqual(calculateRetryDelayMs(-1), 0);
   });
 
   test('resolveDownloadUrl prevents server URL prepend on external podcast CDNs', () => {
@@ -53,14 +43,20 @@ describe('Resilient Download Manager & Queue Recovery Engine', () => {
     const localPath = '/api/items/book-123/file/part-1/download';
     const resolvedLocal = resolveDownloadUrl(serverUrl, localPath);
     assert.strictEqual(resolvedLocal, 'http://192.168.1.69:13378/api/items/book-123/file/part-1/download');
+
+    // Local server cover image appends ?raw=1 (matching DownloadItemPart.kt)
+    const coverPath = '/api/items/book-123/cover';
+    const resolvedCover = resolveDownloadUrl(serverUrl, coverPath);
+    assert.strictEqual(resolvedCover, 'http://192.168.1.69:13378/api/items/book-123/cover?raw=1');
   });
 
   test('shouldAttachBearerToken isolates authorization tokens from third-party hosts', () => {
     const serverUrl = 'https://audio.myhomelab.org';
+    const localUrl = 'http://192.168.1.50:13378';
 
-    // Request to user's server receives auth token
-    const isServerReq = shouldAttachBearerToken('https://audio.myhomelab.org/api/items/123/download', serverUrl);
-    assert.strictEqual(isServerReq, true);
+    // Request to user's remote or local server receives auth token
+    assert.strictEqual(shouldAttachBearerToken('https://audio.myhomelab.org/api/items/123/download', serverUrl, '', localUrl), true);
+    assert.strictEqual(shouldAttachBearerToken('http://192.168.1.50:13378/api/items/123/download', serverUrl, '', localUrl), true);
 
     // Third-party podcast CDNs must NEVER receive server authorization tokens
     assert.strictEqual(shouldAttachBearerToken('https://podtrac.com/pts/redirect.mp3/audio.mp3', serverUrl), false);
@@ -69,30 +65,58 @@ describe('Resilient Download Manager & Queue Recovery Engine', () => {
     assert.strictEqual(shouldAttachBearerToken('https://pdst.fm/e/audio.mp3', serverUrl), false);
   });
 
-  test('Queue batch operations transition items cleanly', () => {
-    let queue = [
-      { id: 'item-1', status: 'downloading', progress: 45 },
-      { id: 'item-2', status: 'queued', progress: 0 },
-      { id: 'item-3', status: 'failed', error: 'Network timeout', retryCount: 2 },
-      { id: 'item-4', status: 'failed', error: 'HTTP 502', retryCount: 1 }
+  test('isItemFailed and isItemActive accurately reflect part states', () => {
+    const activeItem = {
+      id: 'book-1',
+      downloadItemParts: [
+        { id: 'part-1', completed: true, failed: false },
+        { id: 'part-2', completed: false, failed: false, downloadId: 101 }
+      ]
+    };
+    assert.strictEqual(isItemFailed(activeItem), false);
+    assert.strictEqual(isItemActive(activeItem), true);
+    assert.strictEqual(getFailedPartsCount(activeItem), 0);
+
+    const failedItem = {
+      id: 'book-2',
+      downloadItemParts: [
+        { id: 'part-1', completed: true, failed: false },
+        { id: 'part-2', completed: false, failed: true }
+      ]
+    };
+    assert.strictEqual(isItemFailed(failedItem), true);
+    assert.strictEqual(isItemActive(failedItem), false);
+    assert.strictEqual(getFailedPartsCount(failedItem), 1);
+
+    const queuedItem = {
+      id: 'book-3',
+      downloadItemParts: [
+        { id: 'part-1', completed: false, failed: false, downloadId: null }
+      ]
+    };
+    assert.strictEqual(isItemFailed(queuedItem), false);
+    assert.strictEqual(isItemActive(queuedItem), false);
+
+    const terminalItem = {
+      id: 'book-4',
+      terminalFailureAt: 12345678,
+      downloadItemParts: []
+    };
+    assert.strictEqual(isItemFailed(terminalItem), true);
+  });
+
+  test('getQueueCounts accurately aggregates queue statistics', () => {
+    const items = [
+      { id: '1', downloadItemParts: [{ downloadId: 1 }] },
+      { id: '2', downloadItemParts: [{ failed: true }] },
+      { id: '3', downloadItemParts: [{ downloadId: null }] },
+      { id: '4', hasFailed: true }
     ];
 
-    // Filter failed items
-    const failed = queue.filter((i) => i.status === 'failed');
-    assert.strictEqual(failed.length, 2);
-
-    // Retry all failed
-    queue = queue.map((i) => (i.status === 'failed' ? { ...i, status: 'queued', error: null } : i));
-    const active = queue.filter((i) => i.status === 'queued' || i.status === 'downloading');
-    assert.strictEqual(active.length, 4);
-
-    // Clear failed (when none failed)
-    queue = queue.filter((i) => i.status !== 'failed');
-    assert.strictEqual(queue.length, 4);
-
-    // Simulate failure and clear
-    queue[0].status = 'failed';
-    queue = queue.filter((i) => i.status !== 'failed');
-    assert.strictEqual(queue.length, 3);
+    const counts = getQueueCounts(items);
+    assert.strictEqual(counts.total, 4);
+    assert.strictEqual(counts.failed, 2);
+    assert.strictEqual(counts.active, 1);
+    assert.strictEqual(counts.queued, 1);
   });
 });

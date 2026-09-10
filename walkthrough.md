@@ -304,35 +304,35 @@ The signed release APK and Play Store developer AAB bundle (`com.CharcuterieShel
 
 ### Test Suites Implemented (`tests/` & `scripts/run-qa-harness.js`)
 1. **Frontend Unit Suite**:
-   - `update-checker.test.mjs`: Semver parsing and release comparison.
-   - `duration-parser.test.mjs`: `HH:MM:SS`, `MM:SS`, and raw duration parsing.
-   - `favorites-store.test.mjs`: Per-user/server isolation, CRUD, toggle, and drag-and-drop reorder integrity.
+   - `update-checker.test.mjs`: Validates `utils/semverUtils.js` semantic versioning, major/minor/patch increments, GA release precedence over prereleases, lifecycle stage ranking (alpha < beta < rc), and build metadata stripping.
+   - `duration-parser.test.mjs`: Validates `utils/playbackUtils.js` duration parser across `HH:MM:SS`, `MM:SS`, and seconds, with bounds checking and formatted timestamp output.
+   - `favorites-store.test.mjs`: Directly tests the production `LocalStorage` class in `plugins/localStore.js` via pluggable preferences adapter, testing key generation, server config ID priority over LAN/WAN switches, CRUD/toggle operations, subscriptions, and drag-and-drop order persistence.
    - `theming.test.mjs`: CSS variable mapping and settings theme parity across all 14 palettes.
-   - `download-queue.test.mjs`: Exponential retry backoff, URL resolution safety, and CDN bearer token isolation.
+   - `download-queue.test.mjs`: Validates `utils/downloadQueueUtils.js` exponential retry backoff schedule matching Kotlin `DownloadItemManager.kt` (1s, 2s, 4s, 8s, 16s capped at 30s; max 5 retries), URL resolution preserving external CDNs and appending cover query params, and queue item failure/active states.
 2. **Localization Suite**:
    - `i18n-syntax-sort.test.mjs`: Validates all 42 locale JSON files for valid JSON, trailing newlines, and ASCII alphabetical sorting.
 3. **Branding & Native Manifest Suite**:
-   - `manifest-branding.test.mjs`: Validates `com.CharcuterieShelf` applicationId, custom URL scheme, API 36 target, and required services/drawables.
+   - `manifest-branding.test.mjs`: Validates `com.CharcuterieShelf` applicationId, custom URL scheme intent-filters, target API 36, version synchronization with `package.json`, release signing config, and required vector drawables.
 4. **CI/CD & Workflows Suite**:
-   - `workflows-templates.test.mjs`: Validates workflow permissions, gradlew execution, issue templates, and tester whitelisting.
+   - `workflows-templates.test.mjs`: Validates workflow permissions, gradlew execution, automated QA step execution in build/deploy pipelines, issue templates, and tester whitelisting.
 5. **Static Bundle Suite**:
    - `bundle-build.test.mjs`: Verifies Nuxt static bundle output and pre-rendered route files (`dist/bookshelf/favorites/index.html`, etc.).
 6. **Android Native Shell Suite**:
-   - `gradle-build.test.mjs`: Verifies wrapper scripts, Java 21 JDK prerequisite, and signed release keystore.
+   - `gradle-build.test.mjs`: Cross-platform verification of Gradle wrappers, Java 21 JDK (local path or `$JAVA_HOME`), Android SDK (local path or `$ANDROID_HOME`), and signed release keystore.
 
 ### Verification Results (Current Master)
 
 | Verification Suite | Test Count | Result | Execution Time |
 | :--- | :--- | :--- | :--- |
-| **Frontend Unit: Update Checker & Semver** | 6 tests | ✅ PASSED | 168ms |
-| **Frontend Unit: Playback Duration & Timestamp** | 6 tests | ✅ PASSED | 169ms |
-| **Frontend Unit: Podcast Favorites Store** | 5 tests | ✅ PASSED | 173ms |
-| **Frontend Unit: 14 Theme Palettes & Monet** | 5 tests | ✅ PASSED | 169ms |
-| **Frontend Unit: Download Queue & Recovery** | 4 tests | ✅ PASSED | 163ms |
-| **Localization: i18n Syntax & Alphabetization** | 44 tests | ✅ PASSED | 210ms |
-| **Branding & Manifest: com.CharcuterieShelf** | 6 tests | ✅ PASSED | 165ms |
-| **CI/CD & Workflows: GitHub Actions & Templates** | 7 tests | ✅ PASSED | 170ms |
-| **Static Bundle: Nuxt Pre-Rendered Routes** | 3 tests | ✅ PASSED | 165ms |
-| **Android Native: Shell & Gradle Environment** | 5 tests | ✅ PASSED | 161ms |
-| **TOTALS** | **87 tests (10 suites)** | **✅ 100% PASSED** | **1.71s** |
+| **Frontend Unit: Update Checker & Semver** | 8 tests | ✅ PASSED | 182ms |
+| **Frontend Unit: Playback Duration & Timestamp** | 6 tests | ✅ PASSED | 189ms |
+| **Frontend Unit: Podcast Favorites Store** | 6 tests | ✅ PASSED | 163ms |
+| **Frontend Unit: 14 Theme Palettes & Monet** | 5 tests | ✅ PASSED | 163ms |
+| **Frontend Unit: Download Queue & Recovery** | 5 tests | ✅ PASSED | 161ms |
+| **Localization: i18n Syntax & Alphabetization** | 44 tests | ✅ PASSED | 189ms |
+| **Branding & Manifest: com.CharcuterieShelf** | 8 tests | ✅ PASSED | 161ms |
+| **CI/CD & Workflows: GitHub Actions & Templates** | 7 tests | ✅ PASSED | 173ms |
+| **Static Bundle: Nuxt Pre-Rendered Routes** | 3 tests | ✅ PASSED | 160ms |
+| **Android Native: Shell & Gradle Environment** | 5 tests | ✅ PASSED | 164ms |
+| **TOTALS** | **97 tests (10 suites)** | **✅ 100% PASSED** | **1.71s** |
 

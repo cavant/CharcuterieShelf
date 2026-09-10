@@ -264,6 +264,7 @@
 
 <script>
 import { AbsDownloader } from '@/plugins/capacitor'
+import { isItemFailed, isItemActive, getFailedPartsCount } from '@/utils/downloadQueueUtils'
 
 export default {
   data() {
@@ -294,15 +295,13 @@ export default {
   },
   methods: {
     isItemFailed(item) {
-      if (item.hasFailed || item.terminalFailureAt) return true
-      return item.downloadItemParts?.some((p) => p.failed) || false
+      return isItemFailed(item)
     },
     isItemActive(item) {
-      if (this.isItemFailed(item)) return false
-      return item.downloadItemParts?.some((p) => p.downloadId != null || p.isMoving) || false
+      return isItemActive(item)
     },
     getFailedPartsCount(item) {
-      return item.downloadItemParts?.filter((p) => p.failed).length || 0
+      return getFailedPartsCount(item)
     },
     getItemCoverUrl(item) {
       return this.$store.getters['globals/getLibraryItemCoverSrcById'](item.libraryItemId)

@@ -7,6 +7,9 @@ describe('Application ID, Branding & Native Manifest Integrity', () => {
   const buildGradlePath = path.resolve('android/app/build.gradle');
   const buildGradle = fs.readFileSync(buildGradlePath, 'utf8');
 
+  const pkgJsonPath = path.resolve('package.json');
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
+
   const stringsXmlPath = path.resolve('android/app/src/main/res/values/strings.xml');
   const stringsXml = fs.readFileSync(stringsXmlPath, 'utf8');
 
@@ -35,6 +38,23 @@ describe('Application ID, Branding & Native Manifest Integrity', () => {
       buildGradle.includes('targetSdkVersion rootProject.ext.targetSdkVersion') ||
       buildGradle.includes('targetSdkVersion 36'),
       'targetSdkVersion must resolve to 36'
+    );
+  });
+
+  test('Package version and Android build.gradle versionName are strictly in sync', () => {
+    const versionMatch = buildGradle.match(/versionName\s+"([^"]+)"/);
+    assert.ok(versionMatch, 'versionName must be declared in android/app/build.gradle');
+    assert.strictEqual(
+      pkgJson.version,
+      versionMatch[1],
+      `package.json version (${pkgJson.version}) must match build.gradle versionName (${versionMatch[1]})`
+    );
+  });
+
+  test('Release signing configuration references release-key.jks', () => {
+    assert.ok(
+      buildGradle.includes('release-key.jks'),
+      'build.gradle release signingConfig must reference release-key.jks'
     );
   });
 
@@ -70,6 +90,12 @@ describe('Application ID, Branding & Native Manifest Integrity', () => {
     assert.ok(
       manifestXml.includes('android:authorities="${applicationId}.fileprovider"'),
       'FileProvider authorities must match ${applicationId}.fileprovider'
+    );
+
+    // Custom URL scheme handler intent-filter
+    assert.ok(
+      manifestXml.includes('android:scheme="@string/custom_url_scheme"'),
+      'AndroidManifest.xml must declare intent-filter with custom_url_scheme'
     );
 
     // Foreground service permissions

@@ -20,18 +20,24 @@ describe('Android Native Shell & Gradle Build Environment', () => {
   });
 
   test('System Java JDK 21 prerequisite path exists', () => {
-    const jdkPath = 'C:\\Java\\jdk-21';
+    const isWindows = process.platform === 'win32';
+    const envJava = process.env.JAVA_HOME;
+    const hasJdk = (isWindows && fs.existsSync('C:\\Java\\jdk-21')) ||
+                   (envJava && fs.existsSync(envJava));
     assert.ok(
-      fs.existsSync(jdkPath),
-      `Prerequisite JDK 21 at "${jdkPath}" must exist on the development machine`
+      hasJdk,
+      `Prerequisite Java JDK 21 must exist (checked C:\\Java\\jdk-21 and JAVA_HOME: "${envJava || 'unset'}")`
     );
   });
 
   test('Android SDK prerequisite path exists', () => {
-    const sdkPath = 'C:\\Android\\Sdk';
+    const isWindows = process.platform === 'win32';
+    const envSdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
+    const hasSdk = (isWindows && fs.existsSync('C:\\Android\\Sdk')) ||
+                   (envSdk && fs.existsSync(envSdk));
     assert.ok(
-      fs.existsSync(sdkPath),
-      `Prerequisite Android SDK at "${sdkPath}" must exist on the development machine`
+      hasSdk,
+      `Prerequisite Android SDK must exist (checked C:\\Android\\Sdk and ANDROID_HOME: "${envSdk || 'unset'}")`
     );
   });
 

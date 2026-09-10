@@ -98,7 +98,7 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 
 ### 2.5 Resilient Download Manager & Queue Recovery
 - **Dedicated Download Queue View**: Redesigned `/downloading` page with thumbnails, real-time download percentages, MB counters, and animated indicators.
-- **Error Recovery & Exponential Backoff**: Prevents download stalls with smart exponential retry backoff (2s, 4s, 8s, 16s, 32s) in `DownloadItemManager.kt`.
+- **Error Recovery & Exponential Backoff**: Prevents download stalls with smart exponential retry backoff (1s, 2s, 4s, 8s, 16s, capped at 30s; max 5 retries) in `DownloadItemManager.kt` and `utils/downloadQueueUtils.js`.
 - **Granular Item Controls**: Individual **Retry** and **Cancel / Remove** actions on every active or failed media download.
 - **Global Batch Management**: 1-tap **Retry All Failed**, **Clear Failed**, and **Cancel All** batch controls.
 - **Collapsible File-by-File Breakdown**: Inspect individual files and parts within a multi-file audiobook with specific progress and error diagnostics.
@@ -180,10 +180,15 @@ CharcuterieShelf includes an end-to-end automated testing and code review harnes
 
 ### 4.1 Running the Harness
 ```powershell
-# Run entire test harness (unit, i18n, branding, github, static bundle, android)
+# Run entire test harness (all 10 verification suites)
 npm run test:qa
 # or
 node scripts/run-qa-harness.js --all
+
+# Run full end-to-end suite including static Nuxt generation AND native Android debug compilation
+npm run test:full
+# or
+node scripts/run-qa-harness.js --full
 
 # Run individual verification suites
 npm test                  # Frontend unit & regression suite
@@ -191,7 +196,8 @@ npm run test:i18n         # i18n syntax & ASCII sort check
 npm run test:branding     # Application ID, manifests, and branding assets
 npm run test:github       # GitHub Actions workflow & issue template validation
 npm run test:build        # Nuxt generate & static bundle health
-npm run test:android      # Gradle build & JDK 21 integrity
+npm run test:android      # Gradle environment, SDK & JDK 21 integrity
+npm run test:android:compile # Execute native Android gradle debug compilation
 ```
 
 ### 4.2 Reusable Antigravity Skill

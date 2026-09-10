@@ -39,6 +39,10 @@ describe('GitHub Actions CI/CD Workflows & Issue Templates Integrity', () => {
     // Java 21
     assert.ok(buildApk.includes('java-version: 21'), 'build-apk must use Java 21');
     assert.ok(deployApk.includes('java-version: 21'), 'deploy-apk must use Java 21');
+
+    // QA harness execution
+    assert.ok(buildApk.includes('run-qa-harness.js'), 'build-apk must execute QA test harness');
+    assert.ok(deployApk.includes('run-qa-harness.js'), 'deploy-apk must execute QA test harness');
   });
 
   test('deploy-apk.yml uses delimiter-safe sed syntax for date and commit replacement', () => {
