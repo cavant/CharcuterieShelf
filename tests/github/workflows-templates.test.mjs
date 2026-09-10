@@ -82,8 +82,8 @@ describe('GitHub Actions CI/CD Workflows & Issue Templates Integrity', () => {
     const bugReport = fs.readFileSync(path.join(issueTemplatesDir, 'bug_report.yml'), 'utf8');
     const featureReq = fs.readFileSync(path.join(issueTemplatesDir, 'feature_request.yml'), 'utf8');
 
-    assert.ok(bugReport.includes('0.14.7-beta'), 'bug_report.yml must list current version 0.14.7-beta');
-    assert.ok(featureReq.includes('0.14.7-beta'), 'feature_request.yml must list current version 0.14.7-beta');
+    assert.ok(bugReport.includes('0.14.8-beta'), 'bug_report.yml must list current version 0.14.8-beta');
+    assert.ok(featureReq.includes('0.14.8-beta'), 'feature_request.yml must list current version 0.14.8-beta');
   });
 
   test('ISSUE_TEMPLATE/config.yml provides direct support email and live portal link', () => {
