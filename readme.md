@@ -23,7 +23,7 @@
 Google Play requires personal developer accounts to run a closed test with at least 14–20 opted-in testers for 14 days before granting production access. You can help get CharcuterieShelf officially published on Google Play!
 
 **How to join the closed test:**
-1. Send a quick email with your Google Play email address to **[connors.adventures@gmail.com](mailto:connors.adventures@gmail.com)** with the subject *"CharcuterieShelf Tester"*, or open a [Tester Request Issue](https://github.com/cavant/CharcuterieShelf/issues/new?title=Tester+Request&body=Please+add+my+Google+Play+email+to+the+closed+test+track:+%3Cinsert-email%3E).
+1. Send a quick email with your Google Play email address to **[support@themagicsalami.net](mailto:support@themagicsalami.net)** with the subject *"CharcuterieShelf Tester"*, or open a [Tester Request Issue](https://github.com/cavant/CharcuterieShelf/issues/new?title=Tester+Request&body=Please+add+my+Google+Play+email+to+the+closed+test+track:+%3Cinsert-email%3E).
 2. Once added to the tester group, accept the invite on the web:  
    👉 **[Join Closed Testing on the Web](https://play.google.com/apps/testing/com.CharcuterieShelf)**
 3. Download the app directly from Google Play:  
