@@ -74,74 +74,117 @@
       <p class="text-xs text-fg-muted mt-3">Loading your favorites...</p>
     </div>
 
-    <!-- Reorder Instructions Notice -->
-    <div v-if="isReordering && favoriteItems.length > 1" class="w-full py-1.5 px-3 bg-accent/10 border-b border-accent/20 flex items-center justify-center space-x-1.5 text-xs text-accent flex-shrink-0 animate-pulse">
-      <span class="material-symbols text-sm">drag_indicator</span>
-      <span>Drag icons to reorder in whatever arrangement you like</span>
-    </div>
+    <!-- Main Favorites Content -->
+    <div v-else-if="favoriteItems.length" class="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <!-- Reorder Instructions Notice -->
+      <div v-if="isReordering && favoriteItems.length > 1" class="w-full py-1.5 px-3 bg-accent/10 border-b border-accent/20 flex items-center justify-center space-x-1.5 text-xs text-accent flex-shrink-0 animate-pulse">
+        <span class="material-symbols text-sm">drag_indicator</span>
+        <span>Drag icons to reorder in whatever arrangement you like</span>
+      </div>
 
-    <!-- Main Grid Content -->
-    <div v-else-if="favoriteItems.length" class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3">
-      <draggable
-        v-model="favoriteItems"
-        v-bind="dragOptions"
-        class="grid grid-cols-3 gap-2.5 sm:gap-3"
-        tag="div"
-        @start="onDragStart"
-        @end="onDragEnd"
-      >
-        <div
-          v-for="item in displayedItems"
-          :key="item.id"
-          class="podcast-tile relative aspect-square rounded-2xl overflow-hidden bg-secondary shadow-md cursor-pointer border border-border/40 group select-none transition-transform duration-150"
-          :class="{
-            'scale-98 shadow-xl ring-2 ring-accent animate-subtle-wobble': isReordering,
-            'active:scale-95': !isReordering
-          }"
-          @click="onTileClick(item)"
-          @contextmenu.prevent="onTileLongPress(item)"
+      <!-- Main Grid Container -->
+      <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3">
+        <!-- Reorder Mode Grid (Draggable) -->
+        <draggable
+          v-if="isReordering"
+          v-model="favoriteItems"
+          v-bind="dragOptions"
+          class="grid grid-cols-3 gap-2.5 sm:gap-3"
+          tag="div"
+          @start="onDragStart"
+          @end="onDragEnd"
         >
-          <!-- Cover Art Image -->
-          <img
-            :src="getCoverSrc(item)"
-            :alt="getItemTitle(item)"
-            class="w-full h-full object-cover pointer-events-none"
-            loading="lazy"
-            @error="onImageError($event, item)"
-          />
-
-          <!-- Fallback Cover if no image -->
           <div
-            v-if="!item.media?.coverPath && !item.coverContentUrl"
-            class="absolute inset-0 bg-primary/90 p-2 flex flex-col items-center justify-center text-center"
+            v-for="item in favoriteItems"
+            :key="item.id"
+            class="podcast-tile relative aspect-square rounded-2xl overflow-hidden bg-secondary shadow-md cursor-grab active:cursor-grabbing border border-border/40 group select-none transition-transform duration-150 scale-98 shadow-xl ring-2 ring-accent animate-subtle-wobble"
+            @contextmenu.prevent
           >
-            <span class="material-symbols text-fg-muted text-2xl mb-1">podcasts</span>
-            <p class="text-xxs font-semibold text-fg line-clamp-2">{{ getItemTitle(item) }}</p>
-          </div>
+            <!-- Cover Art Image -->
+            <img
+              :src="getCoverSrc(item)"
+              :alt="getItemTitle(item)"
+              class="w-full h-full object-cover pointer-events-none select-none"
+              loading="lazy"
+              @error="onImageError($event, item)"
+            />
 
-          <!-- Pocket Casts Style Unplayed Episode Count Badge (Top-Right) -->
+            <!-- Fallback Cover if no image -->
+            <div
+              v-if="!item.media?.coverPath && !item.coverContentUrl"
+              class="absolute inset-0 bg-primary/90 p-2 flex flex-col items-center justify-center text-center pointer-events-none"
+            >
+              <span class="material-symbols text-fg-muted text-2xl mb-1">podcasts</span>
+              <p class="text-xxs font-semibold text-fg line-clamp-2">{{ getItemTitle(item) }}</p>
+            </div>
+
+            <!-- Pocket Casts Style Unplayed Episode Count Badge (Top-Right) -->
+            <div
+              v-if="getUnplayedBadge(item)"
+              class="absolute top-1.5 right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs shadow-lg border border-black/20 pointer-events-none z-10"
+            >
+              {{ getUnplayedBadge(item) }}
+            </div>
+
+            <!-- Reorder Mode: Drag Overlay & Quick Remove Button -->
+            <div class="absolute inset-0 bg-black/20 pointer-events-none flex items-center justify-center z-10">
+              <span class="material-symbols text-white/80 text-2xl drop-shadow">drag_indicator</span>
+            </div>
+            <button
+              type="button"
+              class="absolute top-1 left-1 w-6 h-6 rounded-full bg-error text-white flex items-center justify-center shadow-md z-20 hover:scale-110 active:scale-95 transition-transform"
+              title="Remove from favorites"
+              @click.stop="removeFavorite(item)"
+            >
+              <span class="material-symbols text-xs font-bold">close</span>
+            </button>
+          </div>
+        </draggable>
+
+        <!-- Normal Viewing Grid (when not reordering) -->
+        <div
+          v-else
+          class="grid grid-cols-3 gap-2.5 sm:gap-3"
+        >
           <div
-            v-if="getUnplayedBadge(item)"
-            class="absolute top-1.5 right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs shadow-lg border border-black/20 pointer-events-none z-10"
+            v-for="item in displayedItems"
+            :key="item.id"
+            class="podcast-tile relative aspect-square rounded-2xl overflow-hidden bg-secondary shadow-md cursor-pointer border border-border/40 group select-none transition-transform duration-150 active:scale-95"
+            @click="onTileClick(item)"
+            @contextmenu.prevent="onTileLongPress(item)"
           >
-            {{ getUnplayedBadge(item) }}
+            <!-- Cover Art Image -->
+            <img
+              :src="getCoverSrc(item)"
+              :alt="getItemTitle(item)"
+              class="w-full h-full object-cover pointer-events-none select-none"
+              loading="lazy"
+              @error="onImageError($event, item)"
+            />
+
+            <!-- Fallback Cover if no image -->
+            <div
+              v-if="!item.media?.coverPath && !item.coverContentUrl"
+              class="absolute inset-0 bg-primary/90 p-2 flex flex-col items-center justify-center text-center pointer-events-none"
+            >
+              <span class="material-symbols text-fg-muted text-2xl mb-1">podcasts</span>
+              <p class="text-xxs font-semibold text-fg line-clamp-2">{{ getItemTitle(item) }}</p>
+            </div>
+
+            <!-- Pocket Casts Style Unplayed Episode Count Badge (Top-Right) -->
+            <div
+              v-if="getUnplayedBadge(item)"
+              class="absolute top-1.5 right-1.5 min-w-[22px] h-[22px] px-1.5 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs shadow-lg border border-black/20 pointer-events-none z-10"
+            >
+              {{ getUnplayedBadge(item) }}
+            </div>
           </div>
 
-          <!-- Reorder Mode: Drag Overlay & Quick Remove Button -->
-          <div v-if="isReordering" class="absolute inset-0 bg-black/20 pointer-events-none flex items-center justify-center z-15">
-            <span class="material-symbols text-white/80 text-2xl drop-shadow">drag_indicator</span>
+          <div v-if="!displayedItems.length" class="col-span-3 py-12 text-center text-xs text-fg-muted">
+            No favorite podcasts match "{{ searchQuery }}".
           </div>
-          <button
-            v-if="isReordering"
-            type="button"
-            class="absolute top-1 left-1 w-6 h-6 rounded-full bg-error text-white flex items-center justify-center shadow-md z-20 hover:scale-110 active:scale-95 transition-transform"
-            title="Remove from favorites"
-            @click.stop="removeFavorite(item)"
-          >
-            <span class="material-symbols text-xs font-bold">close</span>
-          </button>
         </div>
-      </draggable>
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -265,6 +308,7 @@ export default {
     return {
       isLoading: false,
       isReordering: false,
+      isPersistingLocally: false,
       showSearch: false,
       searchQuery: '',
       showAddModal: false,
@@ -289,13 +333,14 @@ export default {
     },
     dragOptions() {
       return {
-        animation: 250,
-        disabled: !this.isReordering,
+        animation: 200,
         ghostClass: 'opacity-40',
         chosenClass: 'scale-105',
         dragClass: 'shadow-2xl',
-        delay: 180,
-        delayOnTouchOnly: true
+        draggable: '.podcast-tile',
+        delay: 50,
+        delayOnTouchOnly: true,
+        touchStartThreshold: 5
       }
     },
     filteredItems() {
@@ -357,7 +402,10 @@ export default {
     async toggleReorder() {
       await this.$hapticsImpact()
       this.isReordering = !this.isReordering
-      if (!this.isReordering) {
+      if (this.isReordering) {
+        this.showSearch = false
+        this.searchQuery = ''
+      } else {
         await this.persistFavoritesOrder()
       }
     },
@@ -376,8 +424,15 @@ export default {
       if (!this.user?.id || !this.serverAddress) return
       const orderIds = this.favoriteItems.map((item) => item.id)
       this.favoriteIds = [...orderIds]
-      await this.$localStore.setUserPodcastFavorites(this.user.id, this.serverAddress, orderIds)
-      this.$eventBus.$emit('podcast-favorites-changed')
+      this.isPersistingLocally = true
+      try {
+        await this.$localStore.setUserPodcastFavorites(this.user.id, this.serverAddress, orderIds)
+        this.$eventBus.$emit('podcast-favorites-changed')
+      } finally {
+        this.$nextTick(() => {
+          this.isPersistingLocally = false
+        })
+      }
     },
     onTileClick(item) {
       if (this.isReordering) return
@@ -385,6 +440,8 @@ export default {
     },
     async onTileLongPress(item) {
       await this.$hapticsImpact()
+      this.showSearch = false
+      this.searchQuery = ''
       this.isReordering = true
     },
     async removeFavorite(item) {
@@ -493,16 +550,24 @@ export default {
   },
   mounted() {
     this.loadFavorites()
+    this.onFavoritesChanged = () => {
+      if (this.isPersistingLocally || this.isReordering) return
+      this.loadFavorites()
+    }
     this.$eventBus.$on('library-changed', this.libraryChanged)
-    this.$eventBus.$on('podcast-favorites-changed', this.loadFavorites)
+    this.$eventBus.$on('podcast-favorites-changed', this.onFavoritesChanged)
     this.$eventBus.$on('podcast-subscription-changed', this.loadFavorites)
-    this.$socket.$on('item_updated', this.itemUpdated)
+    if (this.$socket) {
+      this.$socket.$on('item_updated', this.itemUpdated)
+    }
   },
   beforeDestroy() {
     this.$eventBus.$off('library-changed', this.libraryChanged)
-    this.$eventBus.$off('podcast-favorites-changed', this.loadFavorites)
+    this.$eventBus.$off('podcast-favorites-changed', this.onFavoritesChanged)
     this.$eventBus.$off('podcast-subscription-changed', this.loadFavorites)
-    this.$socket.$off('item_updated', this.itemUpdated)
+    if (this.$socket) {
+      this.$socket.$off('item_updated', this.itemUpdated)
+    }
   }
 }
 </script>
