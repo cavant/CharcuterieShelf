@@ -481,6 +481,64 @@ All GitHub Actions pipelines achieved 100% green status on commit `727a6b2`:
      - **AAEnabler** (`malebuffy/AAEnabler` on GitHub): Selects local APK and installs it with the Google Play installer tag.
      - **KingInstaller** (`fcaronte/KingInstaller` on GitHub): Installs any local APK while spoofing `com.android.vending` as the source.
      - **ADB**: `adb shell pm install -i "com.android.vending" -r CharcuterieShelf.apk`
-   - Once installed via an enabler or ADB (or via the official Google Play Closed Testing track), Android Auto recognizes the package as originating from Google Play and completely unlocks it while driving!
 
+---
 
+## 27. Automatic Deletion of Played Podcasts & Manual Download Management (v0.14.11-beta)
+
+### Problem Solved
+1. Downloaded podcast episodes remained on the mobile device indefinitely even after listeners finished them, silently consuming gigabytes of internal storage unless the user opened deep storage settings.
+2. Users had no quick, direct way to manually delete downloaded episode audio files from episode lists without deleting the show or using Android system settings.
+3. Server disk integrity must be strictly maintained: deleting an episode from device storage should NEVER trigger server-side audio file deletion or wipe listening progress on the Audiobookshelf server.
+
+### Native & Frontend Architecture
+1. **Foreground Service Playback-End Hook (`PlayerNotificationService.kt`)**:
+   - Integrated `deletePlayedPodcastDownload(session: PlaybackSession)` directly into `handlePlaybackEnded()`.
+   - When an episode completes (EOF reached):
+     - Checks the global preference `autoDeletePlayedPodcasts` (default `true`) and per-podcast override in `$localStore` (`podcast_settings_${podcastId}`).
+     - Deletes the local media file via `DocumentFileCompat` / `java.io.File`.
+     - Removes track metadata from `LocalLibraryItem`. If zero tracks remain, purges the parent `LocalLibraryItem` container from SQLite `DbManager` to prevent orphaned database records.
+     - Emits `onLocalEpisodeDeleted(localLibraryItemId, localEpisodeId, serverEpisodeId)` to `AbsAudioPlayer.kt` and the Capacitor Webview.
+2. **Capacitor Bridge & Event Bus (`AbsAudioPlayer.kt` & `AudioPlayer.vue`)**:
+   - `AbsAudioPlayer.kt` bridges native events to the webview via `notifyListeners("onLocalEpisodeDeleted", ret)`.
+   - `AudioPlayer.vue` listens to `onLocalEpisodeDeleted` and emits `local-episode-deleted` on the root `$eventBus`.
+3. **Reactive UI State (`EpisodesTable.vue`, `EpisodeRow.vue`, `LatestEpisodeRow.vue`)**:
+   - **Interactive Download Badges**: Replaced static `download_done` badges with interactive button targets. Tapping prompts the user: *"Delete downloaded episode audio from this device? (Server progress will be preserved)"*.
+   - **Local File Deletion**: Calls `AbsFileSystem.deleteTrackFromItem()`, purges empty containers, and emits `local-episode-deleted`.
+   - **Instant List Reactivity**: `EpisodesTable.vue` tracks `deletedLocalEpisodeIds` and dynamically filters `localEpisodeMap`, instantly updating the UI from downloaded badge to cloud download icon without requiring a page reload.
+   - `pages/item/_id/index.vue` and `pages/bookshelf/latest.vue` listen to `local-episode-deleted` to keep cached local library items synchronized.
+4. **Configuration Controls**:
+   - **Global Settings (`pages/settings.vue`)**: Added a master "Auto-Delete Played Podcasts" toggle switch in the "Podcasts & Downloads" section with an explanatory info dialog.
+   - **Per-Podcast Override (`PodcastSettingsModal.vue`)**: Added an independent "Auto-Delete Played Episodes" switch per show saved in `$localStore`.
+   - **Data Layer (`DeviceClasses.kt`)**: Added `autoDeletePlayedPodcasts: Boolean = true` to `DeviceSettings` with backward-compatible defaults.
+
+### Verification Results
+- **Automated QA Harness (`npm run test:qa`)**: All 11 test suites passed 100% (including new `podcast-auto-delete.test.mjs`).
+- **Static Nuxt Generation (`npm run generate`)**: Built 15 static client pages into `dist/` with 0 errors.
+- **Native Android Compilation (`assembleRelease bundleRelease`)**: Signed release APK (`app-release.apk`, 16.2 MB) and Google Play AAB bundle (`app-release.aab`, 15.6 MB) built successfully with JDK 21.
+- **Cloud Distribution Sync**: Copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
+
+---
+
+## 28. Android Auto In-Car Screen Isolation vs Phone Activity Launch Fix (v0.14.12-beta)
+
+### Problem Solved
+1. After installing with an Android Auto enabler, the "isn't available while driving" message disappeared, but tapping the CharcuterieShelf icon in the Android Auto launcher or tapping the Now Playing card on the car dashboard caused the app to **open on the phone screen** instead of projecting the Media Browser UI on the car's infotainment display.
+2. In Google Automotive guidelines, `distractionOptimized="true"` metadata must **never** be applied to phone activities (`MainActivity`) in Media Apps. Doing so instructs Android Auto to treat `MainActivity` as a standalone Car App activity, prompting Android Auto to launch `MainActivity` directly via `startActivity`. Since `MainActivity` is a standard Capacitor WebView activity that cannot render into Android Auto's projection stream, Android OS launched it on the phone display.
+3. Similarly, providing `sessionActivityPendingIntent` (which points to `MainActivity`) to `mediaSession.setSessionActivity(...)` caused Android Auto's media player controller to fire the pending intent when tapped, redirecting focus to the phone.
+
+### Native Android Architecture & Fix
+1. **Removed `distractionOptimized` from Manifest**:
+   - Removed `<meta-data android:name="distractionOptimized" android:value="true" />` from `<application>` in `AndroidManifest.xml`.
+   - Removed `<meta-data android:name="distractionOptimized" android:value="true" />` from `<activity android:name=".MainActivity">` in `AndroidManifest.xml`.
+   - Result: Android Auto strictly categorizes CharcuterieShelf as a **Media App** (`automotive_app_desc.xml` with `<uses name="media"/>`) rather than an Activity-based Car App.
+2. **Cleared `sessionActivity` on Android Auto Connection (`PlayerNotificationService.kt`)**:
+   - In `PlayerNotificationService.kt:onGetRoot()`, added `mediaSession.setSessionActivity(null)` upon connection.
+   - When Android Auto's in-car MediaController queries `getSessionActivity()`, it receives `null`. Instead of triggering a phone activity launch, Android Auto renders and expands its native in-car Now Playing screen and Media Browser directly on the head unit display.
+   - Phone notification tray interactions remain completely unaffected: `AbMediaDescriptionAdapter.kt:createCurrentContentIntent` directly references `playerNotificationService.sessionActivityPendingIntent`, ensuring tapping notifications on the phone continues to seamlessly bring `MainActivity` to the foreground.
+
+### Verification Results
+- **Automated QA Harness (`npm run test:qa`)**: All 11 verification suites passed 100% in 1.85s.
+- **Native Android Compilation (`assembleRelease bundleRelease`)**: Signed release APK (`app-release.apk`, 16.2 MB) and Google Play AAB bundle (`app-release.aab`, 15.6 MB) built successfully with JDK 21 in 1m 1s.
+- **Cloud Distribution Sync**: Copied `CharcuterieShelf.apk` and `CharcuterieShelf.aab` to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
+- **GitHub Release Live**: Published release `v0.14.12-beta` with `CharcuterieShelf.apk` attached and set as the latest release.
