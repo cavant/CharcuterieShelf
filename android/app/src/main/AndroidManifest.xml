@@ -77,11 +77,11 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
+            <!-- NOTE: MEDIA_PLAY_FROM_SEARCH intent filter removed from MainActivity.
+                 It caused Android Auto to resolve and launch the phone Activity directly
+                 instead of using the MediaBrowserService on the car screen.
+                 Voice search is handled via MediaSessionCompat.Callback.onPlayFromSearch()
+                 in PlayerNotificationService. -->
 
             <!-- Register URL scheme -->
             <intent-filter>

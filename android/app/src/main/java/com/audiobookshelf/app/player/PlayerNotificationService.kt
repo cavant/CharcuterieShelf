@@ -273,9 +273,13 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
               PendingIntent.getActivity(this, 0, sessionIntent, PendingIntent.FLAG_IMMUTABLE)
             }
 
+    // NOTE: Do NOT call setSessionActivity(sessionActivityPendingIntent) here.
+    // Setting it on the MediaSession causes Android Auto to launch the phone Activity
+    // on the car screen instead of using its native in-car media browser UI.
+    // Phone notification taps still work via AbMediaDescriptionAdapter.createCurrentContentIntent()
+    // which reads sessionActivityPendingIntent directly from this service instance.
     mediaSession =
             MediaSessionCompat(this, tag).apply {
-              setSessionActivity(sessionActivityPendingIntent)
               isActive = true
             }
 
@@ -1336,8 +1340,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
       isAndroidAuto = true
 
-      // When Android Auto connects, clear sessionActivity so Android Auto uses its native
-      // in-car Now Playing display and media browser on the car screen rather than launching phone MainActivity.
+      // Defensive: ensure sessionActivity is null so Android Auto never launches phone MainActivity.
+      // sessionActivity is intentionally never set in onCreate(), but null it explicitly as a safety net.
       mediaSession.setSessionActivity(null)
 
       val extras = Bundle()
