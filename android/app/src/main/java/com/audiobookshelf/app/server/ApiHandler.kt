@@ -485,7 +485,7 @@ class ApiHandler(var ctx:Context) {
 
   fun getLibraryItemWithProgress(libraryItemId:String, episodeId:String?, cb: (LibraryItem?) -> Unit) {
     var requestUrl = "/api/items/$libraryItemId?expanded=1&include=progress"
-    if (!episodeId.isNullOrEmpty()) requestUrl += "&episode=$episodeId"
+    if (!episodeId.isNullOrEmpty() && !episodeId.startsWith("rss_")) requestUrl += "&episode=$episodeId"
     getRequest(requestUrl, null, null) {
       if (it.has("error")) {
         Log.e(tag, it.getString("error") ?: "getLibraryItemWithProgress Failed")

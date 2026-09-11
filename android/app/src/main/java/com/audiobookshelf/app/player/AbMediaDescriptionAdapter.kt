@@ -22,7 +22,7 @@ class AbMediaDescriptionAdapter (private val controller: MediaControllerCompat, 
   private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
 
   override fun createCurrentContentIntent(player: Player): PendingIntent? =
-    controller.sessionActivity
+    playerNotificationService.sessionActivityPendingIntent ?: controller.sessionActivity
 
   override fun getCurrentContentText(player: Player) = controller.metadata.description.subtitle.toString()
 

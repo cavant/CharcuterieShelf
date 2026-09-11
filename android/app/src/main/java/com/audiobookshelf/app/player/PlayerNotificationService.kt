@@ -98,6 +98,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   var clientEventEmitter: ClientEventEmitter? = null
 
   private lateinit var ctx: Context
+  var sessionActivityPendingIntent: PendingIntent? = null
   private lateinit var mediaSessionConnector: MediaSessionConnector
   private lateinit var playerNotificationManager: PlayerNotificationManager
   lateinit var mediaSession: MediaSessionCompat
@@ -264,7 +265,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
               createNotificationChannel(channelId, channelName)
             } else ""
 
-    val sessionActivityPendingIntent =
+    sessionActivityPendingIntent =
             packageManager?.getLaunchIntentForPackage(packageName)?.let { sessionIntent ->
               PendingIntent.getActivity(this, 0, sessionIntent, PendingIntent.FLAG_IMMUTABLE)
             }
@@ -1198,17 +1199,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     browseTreeInitListeners.clear()
   }
 
-  // Only allowing android auto or similar to access media browser service
-  //  normal loading of audiobooks is handled in webview (not natively)
+  // Allow media browser clients (Android Auto, Automotive OS, Bluetooth AVRCP, Assistant, Wear OS, widgets)
   private fun isValid(packageName: String, uid: Int): Boolean {
-    Log.d(tag, "onGetRoot: Checking package $packageName with uid $uid")
-    if (uid == android.os.Process.myUid() || packageName == this.packageName) {
-      return true
-    }
-    if (!VALID_MEDIA_BROWSERS.contains(packageName)) {
-      Log.w(tag, "onGetRoot: package $packageName not in valid media browsers whitelist")
-      return false
-    }
+    Log.d(tag, "onGetRoot: Client package $packageName with uid $uid")
     return true
   }
 
@@ -1232,6 +1225,11 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       }
 
       isAndroidAuto = true
+
+      // When Android Auto or an automotive client connects, clear the mediaSession's sessionActivity.
+      // If sessionActivity points to MainActivity, Android Auto considers it a non-distraction-optimized
+      // phone UI and blocks interaction with "isn't available while driving".
+      mediaSession.setSessionActivity(null)
 
       val extras = Bundle()
       extras.putBoolean(MediaConstants.BROWSER_SERVICE_EXTRAS_KEY_SEARCH_SUPPORTED, true)
@@ -1357,12 +1355,37 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       result.sendResult(localBrowseItems)
     } else if (parentMediaId == AUTO_MEDIA_ROOT) {
       Log.d(tag, "Trying to initialize browseTree.")
-      if (!this::browseTree.isInitialized || forceReloadingAndroidAuto) {
-        forceReloadingAndroidAuto = false
-        AbsLogger.info(tag, "onLoadChildren: Loading Android Auto items")
-        mediaManager.loadAndroidAutoItems {
-          AbsLogger.info(tag, "onLoadChildren: Loaded Android Auto data, initializing browseTree")
+      val shouldRefresh = !this::browseTree.isInitialized || forceReloadingAndroidAuto
 
+      if (!this::browseTree.isInitialized) {
+        // Initialize immediately with available/local data so Android Auto gets an instant response and does not time out
+        browseTree =
+                BrowseTree(
+                        this,
+                        mediaManager.serverItemsInProgress,
+                        mediaManager.serverLibraries,
+                        mediaManager.allLibraryPersonalizationsDone
+                )
+        onBrowseTreeInitialized()
+      }
+
+      val children =
+              browseTree[parentMediaId]?.map { item ->
+                Log.d(tag, "Found top menu item: ${item.description.title}")
+                MediaBrowserCompat.MediaItem(
+                        item.description,
+                        MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
+                )
+              }
+
+      result.sendResult(children as MutableList<MediaBrowserCompat.MediaItem>?)
+      firstLoadDone = true
+
+      if (shouldRefresh) {
+        forceReloadingAndroidAuto = false
+        AbsLogger.info(tag, "onLoadChildren: Refreshing Android Auto items in background")
+        mediaManager.loadAndroidAutoItems {
+          AbsLogger.info(tag, "onLoadChildren: Background loaded Android Auto data, refreshing browseTree")
           browseTree =
                   BrowseTree(
                           this,
@@ -1371,17 +1394,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                           mediaManager.allLibraryPersonalizationsDone
                   )
           onBrowseTreeInitialized()
-          val children =
-                  browseTree[parentMediaId]?.map { item ->
-                    Log.d(tag, "Found top menu item: ${item.description.title}")
-                    MediaBrowserCompat.MediaItem(
-                            item.description,
-                            MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                    )
-                  }
+          notifyChildrenChanged("/")
 
-          result.sendResult(children as MutableList<MediaBrowserCompat.MediaItem>?)
-          firstLoadDone = true
           if (mediaManager.serverLibraries.isNotEmpty()) {
             AbsLogger.info(tag, "onLoadChildren: Android Auto fetching personalized data for all libraries")
             mediaManager.populatePersonalizedDataForAllLibraries {
@@ -1396,27 +1410,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
             }
           }
         }
-      } else {
-        Log.d(tag, "Starting browseTree refresh")
-        browseTree =
-                BrowseTree(
-                        this,
-                        mediaManager.serverItemsInProgress,
-                        mediaManager.serverLibraries,
-                        mediaManager.allLibraryPersonalizationsDone
-                )
-        onBrowseTreeInitialized()
-        val children =
-                browseTree[parentMediaId]?.map { item ->
-                  Log.d(tag, "Found top menu item: ${item.description.title}")
-                  MediaBrowserCompat.MediaItem(
-                          item.description,
-                          MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                  )
-                }
-
-        AbsLogger.info(tag, "onLoadChildren: Android auto data loaded")
-        result.sendResult(children as MutableList<MediaBrowserCompat.MediaItem>?)
       }
     } else if (parentMediaId == LIBRARIES_ROOT || parentMediaId == RECENTLY_ROOT)
     {
@@ -1429,8 +1422,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
       if (!this::browseTree.isInitialized)
       {
-        // ✅ good: detach and wait for init
-        result.detach()
         waitForBrowseTree {
           val children = browseTree[parentMediaId]?.map { item ->
             Log.d(tag, "[MENU: $parentMediaId] Showing list item ${item.description.title}")

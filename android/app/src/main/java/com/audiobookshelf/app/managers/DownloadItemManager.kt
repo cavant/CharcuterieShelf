@@ -501,7 +501,6 @@ class DownloadItemManager(
   }
 
   private fun tryReserve(part: DownloadItemPart): Boolean {
-    if (part.fileSize <= 0L && currentDownloadItemParts.any { it.fileSize <= 0L }) return false
     val staging = File(part.destinationPath)
     staging.parentFile?.mkdirs()
     val expectedSize = if (part.fileSize > 0L) part.fileSize else UNKNOWN_PART_RESERVATION_BYTES
@@ -510,7 +509,7 @@ class DownloadItemManager(
     val required = if (part.isInternalStorage) remaining else remaining + expectedSize
     val key = storageKey(staging)
     val fs = statFsFor(staging)
-    val headroom = max(MIN_FREE_SPACE_BYTES, fs.totalBytes / 20L)
+    val headroom = MIN_FREE_SPACE_BYTES
     val alreadyReserved = reservations.filterKeys { storageKey(File(it)) == key }.values.sum()
     if (fs.availableBytes - alreadyReserved < required + headroom) return false
     reservations[part.destinationPath] = required
@@ -520,7 +519,7 @@ class DownloadItemManager(
   private fun hasAvailableSpace(part: DownloadItemPart): Boolean {
     val staging = File(part.destinationPath)
     val fs = statFsFor(staging)
-    return fs.availableBytes >= max(MIN_FREE_SPACE_BYTES, fs.totalBytes / 20L)
+    return fs.availableBytes >= MIN_FREE_SPACE_BYTES
   }
 
   private fun statFsFor(staging: File): StatFs {

@@ -101,7 +101,7 @@ export default {
       return this.episode?.id || this.episode?._rssId || null
     },
     enclosureUrl() {
-      return this.episode?.enclosure?.url || this.episode?.audioTrack?.contentUrl || null
+      return this.episode?.enclosure?.url || this.episode?.enclosureUrl || this.episode?._rssEpisodeData?.enclosure?.url || this.episode?.audioTrack?.contentUrl || null
     },
     descriptionText() {
       return this.episode?.description || this.episode?.subtitle || ''

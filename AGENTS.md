@@ -102,7 +102,8 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 - **Granular Item Controls**: Individual **Retry** and **Cancel / Remove** actions on every active or failed media download.
 - **Global Batch Management**: 1-tap **Retry All Failed**, **Clear Failed**, and **Cancel All** batch controls.
 - **Collapsible File-by-File Breakdown**: Inspect individual files and parts within a multi-file audiobook with specific progress and error diagnostics.
-- **Safe Enclosure & CDN Auth Isolation**: Enclosure URLs starting with `http://` or `https://` are never prepended with the server address, and the server's `Authorization: Bearer` header is never leaked to external third-party podcast CDNs.
+- **Safe Enclosure & CDN Auth Isolation**: Enclosure URLs starting with `http://` or `https://` are never prepended with the server address, the server's `Authorization: Bearer` header is never leaked to external third-party podcast CDNs, and requests include a clean mobile client `User-Agent` (`CharcuterieShelf/0.14.8`) to prevent CDN 403 Forbidden blocks.
+- **Sane Disk Headroom Reservation**: `tryReserve()` and `hasAvailableSpace()` use a fixed 100MB buffer rather than 5% total device storage (which previously blocked downloads on large 256GB/512GB drives).
 
 ### 2.6 In-App Update Detection & Installation from GitHub Releases
 - **Automated Update Detection**: CharcuterieShelf checks GitHub Releases API for newer versions automatically in the background on startup (`plugins/appUpdater.js`).
@@ -113,7 +114,9 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 ### 2.7 Android Auto In-Car Dashboard Playback (Inherited Upstream Feature)
 - **Inherited Upstream Capability**: MediaBrowserServiceCompat integration is inherited directly from upstream Audiobookshelf and works by default. Do not advertise or highlight Android Auto as a custom fork-exclusive differentiator in public readmes or feature lists.
 - **MediaBrowserServiceCompat Integration**: In-car dashboard playback, media browsing, and search support directly through Android Auto (`PlayerNotificationService.kt`).
-- **Automotive Whitelist Support**: Built-in support for Android Auto projection (`com.google.android.projection.gearhead`), `carservice`, Google Quick Search Box, and Bluetooth head unit AVRCP browsing.
+- **Driver Distraction & Safety Optimization**: When Android Auto connects, `mediaSession.setSessionActivity(null)` is set so Android Auto renders its native in-car Now Playing screen instead of trying to launch the phone's non-distraction-optimized `MainActivity` (which triggered the "isn't available while driving" restriction). `AbMediaDescriptionAdapter` preserves `sessionActivityPendingIntent` so phone notifications continue to launch `MainActivity`.
+- **Instant Root Menu & Background Refresh**: `onLoadChildren("/")` returns available/local items instantly to prevent Android Auto's 5-second binder timeout, followed by background synchronization and `notifyChildrenChanged("/")`.
+- **Universal Automotive Connection**: `isValid()` allows all connecting media browser clients across wireless adapters, head units, and Android Automotive OS.
 - **Automotive Metadata**: Declares `automotive_app_desc.xml` and small car icon metadata in `AndroidManifest.xml`.
 
 ### 2.8 Modern Material 3 Playback Widget
@@ -121,7 +124,8 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 - 16dp rounded card with subtle outline (`widget_card_background.xml`), rounded cover art (Glide transform), bold title, artist, and media controls (Rewind, Play/Pause, Fast-Forward).
 
 ### 2.9 Small Notification Icons & Bitmap Notifications
-- **Small Notification Icon**: Monochrome vector icon `R.drawable.icon_monochrome` used in `DownloadService.kt` and `PlayerNotificationService.kt` to ensure sharp rendering on Android status bars without gray clipping boxes.
+- **CharcuterieShelf Small Notification Icon**: Dedicated monochrome vector icon `R.drawable.icon_monochrome` (cutting board with salami slices & books) used in `DownloadService.kt`, `PlayerNotificationService.kt`, and Android Auto metadata to ensure crisp rendering on Android status bars without gray clipping boxes.
+- **Library Icon & Play Store Branding**: Updated `abs_audiobookshelf.xml` and `ic_launcher-playstore.png` with full CharcuterieShelf gourmet iconography.
 - **Media Notification Artwork**: Full-color bitmap artwork rendered into system media controls.
 
 ### 2.10 In-App Metadata, Chapters, Match & Cover Parity

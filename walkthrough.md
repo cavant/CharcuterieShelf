@@ -336,3 +336,43 @@ The signed release APK and Play Store developer AAB bundle (`com.CharcuterieShel
 | **Android Native: Shell & Gradle Environment** | 5 tests | ✅ PASSED | 164ms |
 | **TOTALS** | **97 tests (10 suites)** | **✅ 100% PASSED** | **1.71s** |
 
+---
+
+## 19. Podcast Downloads Stalling, Android Auto Driving Restriction & Icon Refresh (v0.14.8-beta Patch)
+
+### 19.1 Podcast Downloads Queue Stalling Fixed
+- **Root Causes**:
+  1. `DownloadItemManager.kt`: Disk headroom check calculated `max(100MB, totalStorage / 20)`. On modern devices with 256GB–512GB internal storage, this demanded 12.8GB–25.6GB of contiguous free space before allowing any download, instantly failing or freezing downloads on active phones. Furthermore, parts with stream size 0 were rejected.
+  2. `InternalDownloadManager.kt`: OkHttp requests lacked a mobile User-Agent, using standard OkHttp strings that triggered HTTP 403 Forbidden rejections from CDN podcast hosts (Megaphone, Omny, Libsyn).
+  3. `ApiHandler.kt`: For synthesized RSS episodes (starting with `rss_`), calling `/api/items/...&episode=rss_...` resulted in HTTP 404 "Episode not found".
+  4. `EpisodeRow.vue`: `enclosureUrl` failed to resolve nested feed enclosures (`_rssEpisodeData.enclosure.url`).
+- **Fixes Applied**:
+  - `DownloadItemManager.kt`: Headroom capped to a safe fixed `MIN_FREE_SPACE_BYTES` (100MB) and allowed stream parts without known ahead-of-time length.
+  - `InternalDownloadManager.kt`: Added explicit `User-Agent: CharcuterieShelf/0.14.8 (Linux; Android; Mobile; +https://github.com/cavant/CharcuterieShelf)`.
+  - `ApiHandler.kt`: Guarded `!episodeId.startsWith("rss_")` in `getLibraryItemWithProgress`.
+  - `EpisodeRow.vue`: Expanded `enclosureUrl` computed property to inspect all enclosure sources.
+
+### 19.2 Android Auto "Isn't Available While Driving" & Browse Tree Performance
+- **Root Causes**:
+  1. `PlayerNotificationService.kt`: `mediaSession.setSessionActivity(sessionActivityPendingIntent)` was set to launch `MainActivity`. When users interacted with the media playback screen or bottom bar in Android Auto, Android Auto attempted to launch this `sessionActivity`. Because `MainActivity` is a WebView activity without automotive distraction optimization, Android Auto blocked it and displayed **"For your safety, this activity isn't available while driving"**.
+  2. `isValid()` in `PlayerNotificationService.kt`: Enforced a strict 10-package whitelist, blocking modern car head units, wireless adapters (AAWireless, Carlinkit), and automotive launcher packages from connecting to the media browser (`onGetRoot` returned null).
+  3. `onLoadChildren("/")`: Performed blocking server network pings before returning root items, exceeding Android Auto's 5-second binder timeout and failing to render menu items.
+  4. Redundant `result.detach()` call on line 1433 caused `IllegalStateException` crashes.
+- **Fixes Applied**:
+  - `PlayerNotificationService.kt`: When Android Auto connects (`onGetRoot`), `mediaSession.setSessionActivity(null)` is set. Android Auto smoothly renders its built-in full-screen media player and queue without attempting to launch an external non-distraction-optimized activity.
+  - `AbMediaDescriptionAdapter.kt`: Preserves `sessionActivityPendingIntent` from `PlayerNotificationService` so phone notifications (lockscreen and shade) continue to open `MainActivity` when tapped.
+  - `isValid()`: Relaxed to accept all media browser clients (`return true`).
+  - `onLoadChildren("/")`: Instantly initializes `browseTree` with available local/cached items (downloads are always accessible) and sends results synchronously (<5ms), then triggers `mediaManager.loadAndroidAutoItems` in the background with `notifyChildrenChanged("/")` to refresh.
+  - Removed duplicate `result.detach()` call.
+
+### 19.3 Complete CharcuterieShelf Branding & Icon Refresh Everywhere
+- **Root Causes**:
+  1. Status bar and notification shade small icons used `R.drawable.icon_monochrome`, which still contained the old Audiobookshelf headphones + books vector path.
+  2. Android Auto small icon metadata declared `com.google.android.gms.car.notification.SmallIcon` pointing to `@drawable/icon_monochrome`.
+  3. `abs_audiobookshelf.xml` (library folder icon in Android Auto) still contained the upstream vector.
+  4. `ic_launcher-playstore.png` was still the old Audiobookshelf 512x512 graphic.
+- **Fixes Applied**:
+  - `android/app/src/main/res/drawable/icon_monochrome.xml`: Replaced with high-precision, sharp CharcuterieShelf VectorDrawable silhouette (cutting board with handle, sliced cured salami roll with marbling, and audiobook spines with play controls).
+  - `android/app/src/main/res/drawable/abs_audiobookshelf.xml`: Updated to matching CharcuterieShelf VectorDrawable.
+  - `android/app/src/main/ic_launcher-playstore.png`: Overwritten with 512x512 `static/Logo.png`.
+  - Android Auto metadata and status bar notifications now render the CharcuterieShelf silhouette with zero clipping.
