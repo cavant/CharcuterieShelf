@@ -1336,8 +1336,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
       isAndroidAuto = true
 
-      // Ensure mediaSession has valid sessionActivity with distraction-optimized MainActivity
-      sessionActivityPendingIntent?.let { mediaSession.setSessionActivity(it) }
+      // When Android Auto connects, clear sessionActivity so Android Auto uses its native
+      // in-car Now Playing display and media browser on the car screen rather than launching phone MainActivity.
+      mediaSession.setSessionActivity(null)
 
       val extras = Bundle()
       extras.putBoolean(MediaConstants.BROWSER_SERVICE_EXTRAS_KEY_SEARCH_SUPPORTED, true)

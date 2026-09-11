@@ -69,6 +69,8 @@ body:
       description: Please check Settings -> Version in the app.
       multiple: false
       options:
+        - '0.14.12-beta'
+        - '0.14.11-beta'
         - '0.14.10-beta'
         - '0.14.9-beta'
         - '0.14.8-beta'
