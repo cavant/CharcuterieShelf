@@ -102,7 +102,7 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 - **Granular Item Controls**: Individual **Retry** and **Cancel / Remove** actions on every active or failed media download.
 - **Global Batch Management**: 1-tap **Retry All Failed**, **Clear Failed**, and **Cancel All** batch controls.
 - **Collapsible File-by-File Breakdown**: Inspect individual files and parts within a multi-file audiobook with specific progress and error diagnostics.
-- **Safe Enclosure & CDN Auth Isolation**: Enclosure URLs starting with `http://` or `https://` are never prepended with the server address, the server's `Authorization: Bearer` header is never leaked to external third-party podcast CDNs, and requests include a clean mobile client `User-Agent` (`CharcuterieShelf/0.14.8`) to prevent CDN 403 Forbidden blocks.
+- **Safe Enclosure & CDN Auth Isolation**: Enclosure URLs starting with `http://` or `https://` are never prepended with the server address, the server's `Authorization: Bearer` header is never leaked to external third-party podcast CDNs, and requests include a clean mobile client `User-Agent` (`CharcuterieShelf/0.14.9`) to prevent CDN 403 Forbidden blocks.
 - **Sane Disk Headroom Reservation**: `tryReserve()` and `hasAvailableSpace()` use a fixed 100MB buffer rather than 5% total device storage (which previously blocked downloads on large 256GB/512GB drives).
 
 ### 2.6 In-App Update Detection & Installation from GitHub Releases

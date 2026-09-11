@@ -39,6 +39,7 @@ body:
       label: Current App Version You Use
       multiple: false
       options:
+        - '0.14.9-beta'
         - '0.14.8-beta'
         - '0.14.7-beta'
         - '0.14.6-beta'

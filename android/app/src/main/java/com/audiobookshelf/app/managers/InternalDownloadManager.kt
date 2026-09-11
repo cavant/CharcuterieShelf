@@ -39,7 +39,7 @@ class InternalDownloadManager(
     val request =
             Request.Builder()
                     .url(url)
-                    .header("User-Agent", "CharcuterieShelf/0.14.8 (Linux; Android; Mobile; +https://github.com/cavant/CharcuterieShelf)")
+                    .header("User-Agent", "CharcuterieShelf/0.14.9 (Linux; Android; Mobile; +https://github.com/cavant/CharcuterieShelf)")
                     .addHeader("Accept-Encoding", "identity")
                     .apply {
                       if (isAudiobookshelfServer && token.isNotEmpty()) {
