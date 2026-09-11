@@ -194,185 +194,293 @@ Brought complete parity with the web client directly inside the mobile app:
 
 ---
 
-## 11. Deployment & Distribution
+## 11. In-App Updating & Android Package Installer (v0.14.3-beta)
+
+### Problem Solved
+As a sideloaded or independent Android client (`com.CharcuterieShelf`), users previously had to manually check GitHub Releases in an external browser, download the APK, navigate their device file manager, and trigger the install dialog manually.
+
+### Implementation
+- **Native Android Package Installer (`AbsAppUpdater.kt`)**:
+  - `canRequestPackageInstalls()`: Checks Android 8+ (API 26–36) package installation authorization.
+  - `openInstallPermissionSettings()`: Automatically routes users to `Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES` for `package:com.CharcuterieShelf` if permission is required.
+  - `downloadAndInstall()`: Streams the APK download using OkHttp with progress notification events (`downloadProgress` emitted to Vue). Saves safely into `getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)`.
+  - Automatically builds a secure `FileProvider` URI (`com.CharcuterieShelf.fileprovider`) and starts the system package installer intent (`ACTION_VIEW`, `application/vnd.android.package-archive`, `FLAG_GRANT_READ_URI_PERMISSION`).
+- **Capacitor & Nuxt Plugin (`plugins/appUpdater.js`)**:
+  - Automatically queries the GitHub Releases API (`/repos/cavant/CharcuterieShelf/releases`) for published releases.
+  - Compares versions via robust semantic versioning logic (`isNewerVersion`) that correctly handles `v` prefixes and `-beta` increments.
+  - Emits `app-update-available` event and maintains reactive observable state for download progress, active version, and latest release metadata.
+- **Update Dialog & Presentation (`AppUpdateModal.vue`)**:
+  - Clean Material 3 style modal with installed vs latest version badges, APK file size, and scrollable release notes.
+  - Real-time animated progress bar showing live download percentage.
+  - In-line warning with 1-tap "Open Permission Settings" button if unknown app installation permissions are missing.
+- **Settings & Navigation Drawer Integration**:
+  - **Settings (`pages/settings.vue`)**: Added dedicated "App Updates" card with current version status, "Check for Updates" button, and GitHub release link.
+  - **Navigation Drawer (`SideDrawer.vue`)**: Added a prominent "Update Available" banner button and pulsing status badge next to the version footer.
+  - **Default Layout (`layouts/default.vue`)**: Checks for updates non-blockingly in the background on app startup.
+
+---
+
+## 12. Deployment & Distribution
 
 ### Cloud Drive Distribution
-The signed release APK and Play Store developer AAB bundle (`com.CharcuterieShelf`, API 36, Version Code 122) have been copied to:
+The signed release APK and Play Store developer AAB bundle (`com.CharcuterieShelf`, API 36, Version Code 123) have been copied to:
 1. `E:\Google Drive\CharcuterieShelf.apk` & `E:\Google Drive\CharcuterieShelf.aab`
 2. `C:\Users\Connor\OneDrive\CharcuterieShelf.apk` & `C:\Users\Connor\OneDrive\CharcuterieShelf.aab`
 
-### Remote Git Repository & GitHub Releases
-- **Remote**: `https://github.com/cavant/CharcuterieShelf.git`
-- **Branch**: `master`
-- **GitHub Release**: [`v0.14.2-beta`](https://github.com/cavant/CharcuterieShelf/releases/tag/v0.14.2-beta)
-- **Direct APK Download**: [`CharcuterieShelf.apk`](https://github.com/cavant/CharcuterieShelf/releases/download/v0.14.2-beta/CharcuterieShelf.apk) (16.17 MB)
-- **Direct AAB Download**: [`CharcuterieShelf.aab`](https://github.com/cavant/CharcuterieShelf/releases/download/v0.14.2-beta/CharcuterieShelf.aab) (15.58 MB)
+---
+
+## 13. Resilient Download Manager & Queue Recovery
+
+### Problem Solved
+1. When downloading audiobooks with multiple parts or large files, intermittent network drops or file timeouts caused downloads to silently stall.
+2. In `DownloadItemManager.kt`, when a part exceeded `MAX_RETRIES` (5), it set `failed = true` but did not dispatch `onDownloadItemPartUpdate` or `onDownloadItem` failure events, leaving the item stalled in the UI without any error badge or status indication.
+3. Rapid retry loops without delays burned through all 5 retries in seconds on transient glitches.
+4. There were no native or UI methods to cancel an individual download, retry an individual item, clear failed downloads, or inspect file-level progress.
+5. In `DownloadProgressIndicator.vue`, `onQueueChanged` would blindly clear the UI queue whenever `hasWork` became false, wiping failed items from the UI while they stayed stuck in the SQLite database and background queue.
+
+### Implementation
+- **Exponential Retry Backoff (`DownloadItemManager.kt`)**:
+  - Implemented backoff delays (2s, 4s, 8s, 16s, 32s) between retries to prevent premature failure during brief Wi-Fi or cellular hiccups.
+  - On reaching `MAX_RETRIES`, dispatches `clientEventEmitter.onDownloadItemPartUpdate(part)` and `clientEventEmitter.onDownloadItem(item)` with terminal failure metadata.
+- **Queue Controls & Bridge Methods (`AbsDownloader.kt` & `plugins/capacitor/AbsDownloader.js`)**:
+  - `cancelDownloadItem(id)`: Cancels active OkHttp calls, deletes partial `.part` staging files, removes from database and queue, and emits `onDownloadItemCancelled`.
+  - `retryDownloadItem(id)`: Resets failure flags, retry counters, and immediately restarts the download pipeline.
+  - `clearFailedDownloads()`: Cancels and cleans up all failed jobs in one operation.
+  - `retryAllFailed()`: Retries all failed downloads in one tap.
+  - `getDownloadQueue()`: Returns the full native download queue to keep the frontend synchronized.
+- **Redesigned Download Manager (`pages/downloading.vue`)**:
+  - Redesigned with media card layouts featuring cover art thumbnails, item title, author/podcast, and status badges (`Downloading`, `Queued`, `Failed`).
+  - Progress bar with percentage and downloaded MB vs total MB.
+  - Individual **Retry** and **Cancel / Delete** action buttons on every download item.
+  - Header batch actions: **Retry All Failed**, **Clear Failed**, and **Cancel All**.
+  - Filter tabs: **All**, **Active & Queued**, and **Failed**.
+  - Collapsible file-by-file breakdown showing individual part completion, file size, progress, and error diagnostics.
 
 ---
 
-## 12. Verification Results (v0.14.2-beta)
+## 14. Android Auto Integration & In-Car Dashboard Playback
 
-| Test / Check | Result | Notes |
-| :--- | :--- | :--- |
-| **Duration Parsing Tests** | ✅ PASSED | `HH:MM:SS`, `MM:SS`, and raw integer seconds parsed without `NaN` |
-| **ExoPlayer Live Duration Sync** | ✅ PASSED | `STATE_READY` captures `currentPlayer.duration`, updates `session`, `MediaMetadataCompat`, and Vue |
-| **Direct Enclosure URL Safety** | ✅ PASSED | `serverUrl()` preserves external `https://` URLs without prepending server address |
-| **CDN Auth Isolation** | ✅ PASSED | Bearer token omitted for 3rd-party podcast hosts; included for ABS server |
-| **Frontend Bundle (`npm run generate`)** | ✅ PASSED | Nuxt production static bundle generated cleanly |
-| **Capacitor Sync (`npx cap sync android`)** | ✅ PASSED | Web assets synced to Android native shell |
-| **Release APK Build (`assembleRelease`)** | ✅ PASSED | Signed release APK created with JDK 21 (16.17 MB) |
-| **Play Store AAB Build (`bundleRelease`)** | ✅ PASSED | Signed Android App Bundle created (15.58 MB) |
-| **Package Name Verification (`aapt`)** | ✅ PASSED | `package: name='com.CharcuterieShelf'` |
-| **SDK Target Verification (`aapt`)** | ✅ PASSED | `compileSdkVersion='36'`, `targetSdkVersion='36'` |
-| **Version Code & Name (`aapt`)** | ✅ PASSED | `versionCode='122'`, `versionName='0.14.2-beta'` |
-| **Cloud Drive Copy** | ✅ PASSED | Both `.apk` and `.aab` copied to Google Drive and OneDrive |
-| **GitHub Release Upload** | ✅ PASSED | Release `v0.14.2-beta` created with `CharcuterieShelf.apk` and `CharcuterieShelf.aab` |
+### Problem Solved
+1. `PlayerNotificationService.kt` implemented `MediaBrowserServiceCompat` but maintained an outdated package whitelist (`VALID_MEDIA_BROWSERS`) containing only `com.audiobookshelf.app`. When `com.CharcuterieShelf` connected, `isValid()` returned `false`, rejecting the connection with `BrowserRoot == null`.
+2. Sideloaded Android Auto media apps (`com.CharcuterieShelf` installed outside Google Play closed track) require "Unknown sources" enabled in Android Auto Developer Settings to appear on vehicle screens.
+
+### Implementation
+- **Automotive Whitelist & Process Validation (`PlayerNotificationService.kt`)**:
+  - Added `"com.CharcuterieShelf"`, `"com.CharcuterieShelf.debug"`, and `this.packageName` to `VALID_MEDIA_BROWSERS`.
+  - Added automotive projection packages: `com.google.android.projection.gearhead` (Android Auto), `com.google.android.apps.auto.carservice`, and `com.android.bluetooth` (Bluetooth AVRCP).
+  - Allowed `uid == Process.myUid()` and self-package matches to pass verification unconditionally.
+- **In-App Android Auto Setup Guide (`pages/settings.vue`)**:
+  - Added a dedicated setup card under **Settings → Android Auto** explaining step-by-step how to enable "Unknown sources" in Android Auto Developer Settings (tap Version 10 times → 3 dots → Developer settings → check Unknown sources).
 
 ---
 
-## 13. In-App Updates via GitHub Releases (v0.14.3-beta)
+## 15. Morphe-Grade Dynamic Theming & Palette Options
 
-- **Semantic Versioning & Update Engine (`utils/semverUtils.js` & `plugins/appUpdater.js`)**:
-  - Automatically queries GitHub Releases API (`api.github.com/repos/cavant/CharcuterieShelf/releases`) in the background on launch.
-  - Compares running app version against latest published release using semantic version comparator (`isNewerVersion`).
-  - Displays release changelog, download progress indicator, and APK package installer intent via `FileProvider` (`AbsAppUpdater.kt`).
-  - Pulsing navigation badge in `SideDrawer.vue` and on-demand check button in `pages/settings.vue`.
+### Problem Solved
+1. `tailwind.config.js` hardcoded `accent: '#1ad691'`, which blocked dynamic accent colors from reaching Tailwind UI elements (buttons, sliders, progress bars, chips, and icons).
+2. Users wanted expanded theming parity with popular open-source Android apps like Morphe Manager, including pure AMOLED Monet theming and popular color themes.
 
----
-
-## 14. Download Queue Recovery & Android Auto Support (v0.14.4-beta)
-
-- **Resilient Download Manager (`pages/downloading.vue` & `DownloadItemManager.kt`)**:
-  - Dedicated `/downloading` management console with progress indicators, MB transferred counters, and active/queued/failed filter chips.
-  - Exponential retry backoff on failure (2s, 4s, 8s, 16s, 32s) before terminal failure notifications.
-  - Granular controls: per-item Retry/Cancel and global batch actions ("Retry All Failed", "Clear Failed", "Cancel All").
-  - Multi-file audiobook collapsible breakdown displaying status of individual audio parts.
-- **Android Auto Dashboard Playback (`PlayerNotificationService.kt`)**:
-  - `PlayerNotificationService` extends `MediaBrowserServiceCompat` to provide media tree browsing on car head units.
-  - Automotive whitelist support for `com.google.android.projection.gearhead`, `carservice`, Google Quick Search Box, and Bluetooth head unit AVRCP browsing.
-  - In-app setup instructions in `pages/settings.vue` for sideloaded packages.
-
----
-
-## 15. Material You Monet Dynamic Theming & 14 Curated Palettes
-
-- **Dynamic Wallpaper Color Extraction (`AbsThemePlugin.kt`)**:
-  - Extracts Android 12+ Monet wallpaper colors and injects dynamic CSS variables (`--dynamic-accent`, `--dynamic-bg`, `--dynamic-primary`, etc.).
-- **14 Built-In Palettes (`assets/tailwind.css` & `pages/settings.vue`)**:
-  - `material-you`: Monet dynamic wallpaper tones.
-  - `material-you-amoled`: Pitch black `#000000` base with Monet accents.
-  - `dracula`: Classic vampire dark with purple/pink tones.
-  - `tokyo-night`: Cyberpunk navy and neon cyan.
-  - `gruvbox`: Retro warm dark with golden yellow accents.
-  - `rose-pine`: Muted elegance with soft rose accents.
-  - `black`: Pitch black OLED `#000000`.
-  - `nord`: Arctic blue-gray developer theme.
-  - `catppuccin`: Macchiato pastel plum.
-  - `forest`: Deep evergreen pine.
-  - `sepia`: Warm book paper and terracotta.
-  - `slate`: Midnight blue slate.
-  - `dark`: Default neutral charcoal.
-  - `light`: Crisp clean daytime white.
-- **Interactive Accent Tone Engine**: Instant accent picker in settings across 9 vibrant color choices.
+### Implementation
+- **Dynamic Accent in Tailwind (`tailwind.config.js`)**:
+  - Updated `accent` to `rgb(var(--color-accent, 26 214 145) / <alpha-value>)`.
+- **14 Built-In Themes (`assets/tailwind.css` & `pages/settings.vue`)**:
+  - `material-you`: Monet dynamic wallpaper palette extraction for Android 12+.
+  - `material-you-amoled`: Pitch Black `#000000` background combined with Monet dynamic wallpaper accent tokens.
+  - `dracula`: Dracula purple (`#bd93f9`) and pink (`#ff79c6`) on dark foundation (`#282a36`).
+  - `tokyo-night`: Cyberpunk navy (`#1a1b26`) with electric cyan (`#7dcfff`).
+  - `gruvbox`: Retro warm dark (`#282828`) with golden yellow (`#fabd2f`).
+  - `rose-pine`: Muted dark (`#191724`) with soft rose (`#ebbcba`).
+  - `black`: OLED Pitch Black `#000000`.
+  - `nord`: Arctic blue-gray (`#2e3440`).
+  - `catppuccin`: Macchiato (`#24273a`).
+  - `forest`: Evergreen pine (`#14221c`).
+  - `sepia`: Warm book paper (`#27211d`).
+  - `slate`: Midnight blue slate (`#0f172a`).
+  - `dark`: Default Audiobookshelf dark.
+  - `light`: Crisp daytime white.
+- **Interactive Custom Accent Color Picker (`pages/settings.vue` & `plugins/localStore.js`)**:
+  - Added horizontal swatch palette picker in Settings: Theme Default, Emerald, Electric Cyan, Sky Blue, Royal Violet, Hot Pink, Sunset Amber, Crimson Red, and Lime.
+  - Persisted in `$localStore` and dynamically applied to `--color-accent` across the application.
 
 ---
 
-## 16. Pocket Casts 3-Column Reorderable Favorites Grid (v0.14.5-beta – v0.14.7-beta)
+## 17. Podcast Favorites & Custom Reorder Grid (Pocket Casts Style)
 
-- **Dedicated Favorites Shelf (`pages/bookshelf/favorites.vue`)**:
-  - 3-column Pocket Casts-style cover art grid with circular unplayed episode count badges.
-  - Long-press or tap "Reorder" to enter tactile drag-and-drop reorder mode powered by `vuedraggable`.
-  - Stored per user and server profile in `$localStore` (`podcast_favs_${serverAddress}_${userId}`).
-  - Filterable batch add/remove modal and 1-tap seeding from current subscriptions.
-  - Fixed blank-screen drag regression in v0.14.7-beta.
+### User Request
+Add an option to favorite podcasts and have a dedicated tab under the podcasts section for favorites that allows custom drag-and-drop icon reordering in a 3-column badge grid matching Pocket Casts.
 
----
-
-## 17. CI/CD Pipeline Repair & Google Play Closed Testing Onboarding
-
-- **GitHub Actions Workflows**:
-  - `build-apk.yml`: Added explicit permissions and executable `gradlew` permissions.
-  - `deploy-apk.yml`: Configured GitHub Pages test APK deployment to `https://cavant.github.io/CharcuterieShelf/` with delimiter-safe sed syntax.
-  - `i18n-check.yml`: Automated localization validation and uncommitted diff check.
-  - `close_blank_issues.yaml`: Whitelisted closed testing requests from being automatically closed.
-  - `.github/ISSUE_TEMPLATE/tester_request.yml`: Dedicated intake form for Google Play 14-day closed testers.
-  - Contact email: `support@themagicsalami.net`.
-
----
-
-## 18. Full-Stack Automated QA Test Harness & Reusable Agent Skill
-
-### Test Suites Implemented (`tests/` & `scripts/run-qa-harness.js`)
-1. **Frontend Unit Suite**:
-   - `update-checker.test.mjs`: Validates `utils/semverUtils.js` semantic versioning, major/minor/patch increments, GA release precedence over prereleases, lifecycle stage ranking (alpha < beta < rc), and build metadata stripping.
-   - `duration-parser.test.mjs`: Validates `utils/playbackUtils.js` duration parser across `HH:MM:SS`, `MM:SS`, and seconds, with bounds checking and formatted timestamp output.
-   - `favorites-store.test.mjs`: Directly tests the production `LocalStorage` class in `plugins/localStore.js` via pluggable preferences adapter, testing key generation, server config ID priority over LAN/WAN switches, CRUD/toggle operations, subscriptions, and drag-and-drop order persistence.
-   - `theming.test.mjs`: CSS variable mapping and settings theme parity across all 14 palettes.
-   - `download-queue.test.mjs`: Validates `utils/downloadQueueUtils.js` exponential retry backoff schedule matching Kotlin `DownloadItemManager.kt` (1s, 2s, 4s, 8s, 16s capped at 30s; max 5 retries), URL resolution preserving external CDNs and appending cover query params, and queue item failure/active states.
-2. **Localization Suite**:
-   - `i18n-syntax-sort.test.mjs`: Validates all 42 locale JSON files for valid JSON, trailing newlines, and ASCII alphabetical sorting.
-3. **Branding & Native Manifest Suite**:
-   - `manifest-branding.test.mjs`: Validates `com.CharcuterieShelf` applicationId, custom URL scheme intent-filters, target API 36, version synchronization with `package.json`, release signing config, and required vector drawables.
-4. **CI/CD & Workflows Suite**:
-   - `workflows-templates.test.mjs`: Validates workflow permissions, gradlew execution, automated QA step execution in build/deploy pipelines, issue templates, and tester whitelisting.
-5. **Static Bundle Suite**:
-   - `bundle-build.test.mjs`: Verifies Nuxt static bundle output and pre-rendered route files (`dist/bookshelf/favorites/index.html`, etc.).
-6. **Android Native Shell Suite**:
-   - `gradle-build.test.mjs`: Cross-platform verification of Gradle wrappers, Java 21 JDK (local path or `$JAVA_HOME`), Android SDK (local path or `$ANDROID_HOME`), and signed release keystore.
-
-### Verification Results (Current Master)
-
-| Verification Suite | Test Count | Result | Execution Time |
-| :--- | :--- | :--- | :--- |
-| **Frontend Unit: Update Checker & Semver** | 8 tests | ✅ PASSED | 182ms |
-| **Frontend Unit: Playback Duration & Timestamp** | 6 tests | ✅ PASSED | 189ms |
-| **Frontend Unit: Podcast Favorites Store** | 6 tests | ✅ PASSED | 163ms |
-| **Frontend Unit: 14 Theme Palettes & Monet** | 5 tests | ✅ PASSED | 163ms |
-| **Frontend Unit: Download Queue & Recovery** | 5 tests | ✅ PASSED | 161ms |
-| **Localization: i18n Syntax & Alphabetization** | 44 tests | ✅ PASSED | 189ms |
-| **Branding & Manifest: com.CharcuterieShelf** | 8 tests | ✅ PASSED | 161ms |
-| **CI/CD & Workflows: GitHub Actions & Templates** | 7 tests | ✅ PASSED | 173ms |
-| **Static Bundle: Nuxt Pre-Rendered Routes** | 3 tests | ✅ PASSED | 160ms |
-| **Android Native: Shell & Gradle Environment** | 5 tests | ✅ PASSED | 164ms |
-| **TOTALS** | **97 tests (10 suites)** | **✅ 100% PASSED** | **1.71s** |
+### Implementation
+- **Per-User, Per-Server Favorites Persistence (`plugins/localStore.js`)**:
+  - Implemented `getUserPodcastFavorites()`, `setUserPodcastFavorites()`, `isUserPodcastFavorite()`, and `toggleUserPodcastFavorite()` storing ordered podcast ID arrays into Capacitor Preferences (`podcast_favs_<serverAddress>_<userId>`).
+  - Emits `podcast-favorites-changed` across the global `$eventBus`.
+- **Top-Level Navigation Tab (`components/home/BookshelfNavBar.vue` & `pages/bookshelf.vue`)**:
+  - Added the **Favorites** tab (`/bookshelf/favorites`) to the top podcast navbar between Home and Latest with a star icon.
+  - Updated `hideToolbar` in `pages/bookshelf.vue` for full screen vertical immersion.
+- **Pocket Casts-Style 3-Column Grid (`pages/bookshelf/favorites.vue`)**:
+  - Responsive 3-column grid (`grid grid-cols-3 gap-2.5 sm:gap-3 p-3`).
+  - Square 1:1 cover art with `rounded-2xl` corners, shadow, and clean borders.
+  - Circular badge in the top-right corner showing unplayed episode counts (`numEpisodesIncomplete`, e.g. "97", "20", "7", "99") matching Pocket Casts.
+- **Fluid Drag-and-Drop Reordering**:
+  - Powered by `vuedraggable` with touch press-and-hold delay and smooth animations.
+  - Dedicated **Reorder** ↔ **Done** mode toggle displaying drag handles and quick-remove ("✕") badges.
+  - Reordering automatically updates and saves the user's custom sequence to storage on drag end.
+- **1-Tap Favorite Toggles**:
+  - Added gold star Favorite button on the Podcast detail page (`pages/item/_id/index.vue`).
+  - Added "Add to Favorites" / "Remove from Favorites" in the Item More Menu (`components/modals/ItemMoreMenuModal.vue`).
+- **Batch Add Picker & Empty State Seeding**:
+  - Batch "Manage Favorite Podcasts" modal allows multi-selecting shows with instant search.
+  - Empty state includes a 1-tap **"Add Subscribed Shows"** button to immediately seed the shelf.
 
 ---
 
-## 19. Podcast Downloads Stalling, Android Auto Driving Restriction & Icon Refresh (v0.14.8-beta Patch)
+---
 
-### 19.1 Podcast Downloads Queue Stalling Fixed
-- **Root Causes**:
-  1. `DownloadItemManager.kt`: Disk headroom check calculated `max(100MB, totalStorage / 20)`. On modern devices with 256GB–512GB internal storage, this demanded 12.8GB–25.6GB of contiguous free space before allowing any download, instantly failing or freezing downloads on active phones. Furthermore, parts with stream size 0 were rejected.
-  2. `InternalDownloadManager.kt`: OkHttp requests lacked a mobile User-Agent, using standard OkHttp strings that triggered HTTP 403 Forbidden rejections from CDN podcast hosts (Megaphone, Omny, Libsyn).
-  3. `ApiHandler.kt`: For synthesized RSS episodes (starting with `rss_`), calling `/api/items/...&episode=rss_...` resulted in HTTP 404 "Episode not found".
-  4. `EpisodeRow.vue`: `enclosureUrl` failed to resolve nested feed enclosures (`_rssEpisodeData.enclosure.url`).
-- **Fixes Applied**:
-  - `DownloadItemManager.kt`: Headroom capped to a safe fixed `MIN_FREE_SPACE_BYTES` (100MB) and allowed stream parts without known ahead-of-time length.
-  - `InternalDownloadManager.kt`: Added explicit `User-Agent: CharcuterieShelf/0.14.8 (Linux; Android; Mobile; +https://github.com/cavant/CharcuterieShelf)`.
-  - `ApiHandler.kt`: Guarded `!episodeId.startsWith("rss_")` in `getLibraryItemWithProgress`.
-  - `EpisodeRow.vue`: Expanded `enclosureUrl` computed property to inspect all enclosure sources.
+## 19. Notification Icon & System UI Polish
 
-### 19.2 Android Auto "Isn't Available While Driving" & Browse Tree Performance
-- **Root Causes**:
-  1. `PlayerNotificationService.kt`: `mediaSession.setSessionActivity(sessionActivityPendingIntent)` was set to launch `MainActivity`. When users interacted with the media playback screen or bottom bar in Android Auto, Android Auto attempted to launch this `sessionActivity`. Because `MainActivity` is a WebView activity without automotive distraction optimization, Android Auto blocked it and displayed **"For your safety, this activity isn't available while driving"**.
-  2. `isValid()` in `PlayerNotificationService.kt`: Enforced a strict 10-package whitelist, blocking modern car head units, wireless adapters (AAWireless, Carlinkit), and automotive launcher packages from connecting to the media browser (`onGetRoot` returned null).
-  3. `onLoadChildren("/")`: Performed blocking server network pings before returning root items, exceeding Android Auto's 5-second binder timeout and failing to render menu items.
-  4. Redundant `result.detach()` call on line 1433 caused `IllegalStateException` crashes.
-- **Fixes Applied**:
-  - `PlayerNotificationService.kt`: When Android Auto connects (`onGetRoot`), `mediaSession.setSessionActivity(null)` is set. Android Auto smoothly renders its built-in full-screen media player and queue without attempting to launch an external non-distraction-optimized activity.
-  - `AbMediaDescriptionAdapter.kt`: Preserves `sessionActivityPendingIntent` from `PlayerNotificationService` so phone notifications (lockscreen and shade) continue to open `MainActivity` when tapped.
-  - `isValid()`: Relaxed to accept all media browser clients (`return true`).
-  - `onLoadChildren("/")`: Instantly initializes `browseTree` with available local/cached items (downloads are always accessible) and sends results synchronously (<5ms), then triggers `mediaManager.loadAndroidAutoItems` in the background with `notifyChildrenChanged("/")` to refresh.
-  - Removed duplicate `result.detach()` call.
+### Problem Solved
+On modern Android (Android 10 through Android 16 / Samsung One UI), notification icons displayed with two visual glitches during downloads:
+1. The small status bar notification icon appeared as a washed-out or solid white square because Android tints the small icon monochomatically, and `R.drawable.icon` is a multi-color launcher graphic.
+2. The large squircle card on the notification panel displayed completely empty / blank because `setLargeIcon()` was never called on `NotificationCompat.Builder`.
 
-### 19.3 Complete CharcuterieShelf Branding & Icon Refresh Everywhere
-- **Root Causes**:
-  1. Status bar and notification shade small icons used `R.drawable.icon_monochrome`, which still contained the old Audiobookshelf headphones + books vector path.
-  2. Android Auto small icon metadata declared `com.google.android.gms.car.notification.SmallIcon` pointing to `@drawable/icon_monochrome`.
-  3. `abs_audiobookshelf.xml` (library folder icon in Android Auto) still contained the upstream vector.
-  4. `ic_launcher-playstore.png` was still the old Audiobookshelf 512x512 graphic.
-- **Fixes Applied**:
-  - `android/app/src/main/res/drawable/icon_monochrome.xml`: Replaced with high-precision, sharp CharcuterieShelf VectorDrawable silhouette (cutting board with handle, sliced cured salami roll with marbling, and audiobook spines with play controls).
-  - `android/app/src/main/res/drawable/abs_audiobookshelf.xml`: Updated to matching CharcuterieShelf VectorDrawable.
-  - `android/app/src/main/ic_launcher-playstore.png`: Overwritten with 512x512 `static/Logo.png`.
-  - Android Auto metadata and status bar notifications now render the CharcuterieShelf silhouette with zero clipping.
+### Implementation
+- **Monochrome Small Icon (`DownloadService.kt`)**:
+  - Replaced `.setSmallIcon(R.drawable.icon)` with `.setSmallIcon(R.drawable.icon_monochrome)`.
+  - Uses the official clean vector path with transparent alpha masking, rendering crisp white/accent outlines on status bars and always-on displays.
+- **Dynamic Large Icon Decoding (`DownloadService.kt`)**:
+  - Implemented `getAppIconBitmap()` with caching.
+  - Safely extracts `R.mipmap.ic_launcher` via `ContextCompat.getDrawable()`, accurately rasterizing adaptive drawables or bitmap drawables to a clean ARGB_8888 bitmap.
+  - Injects `builder.setLargeIcon(it)` into the download foreground notification, displaying the full-color CharcuterieShelf brand icon inside the notification squircle.
+
+---
+
+## 20. Official Audiobookshelf Documentation Fork & Community Apps Listing
+
+### Implementation
+- **Official Docs Fork**:
+  - Forked `audiobookshelf/audiobookshelf-docs` to `cavant/audiobookshelf-docs`.
+  - Cloned locally into `C:\audiobookshelf-docs`.
+  - Created isolated branch `add-charcuterieshelf`.
+- **Community Apps Listing Entry (`src/components/CommunityAppsPage/communityAppsData.js`)**:
+  - Added entry for **CharcuterieShelf** with tags `['Audiobooks', 'Podcasts']` and platforms `['Android', 'AAOS']`.
+  - Accurately described the core feature set (Material You dynamic Monet theming, 14 built-in palettes, Pocket Casts-style podcatcher with 3-column reorderable favorites, Android Auto support, device-only podcast downloads, and in-app metadata & chapter parity).
+- **Docusaurus Production Build Verification**:
+  - Tested local compilation with `npm run build`: verified clean build with 0 errors.
+  - Confirmed generated HTML and client chunks contain the CharcuterieShelf listing.
+- **Google Play Closed Testing Callout (`readme.md`)**:
+  - Added dedicated section inviting community members to join the 14-day closed test track via email (`support@themagicsalami.net`), web opt-in link, and direct Play Store download.
+  - Updated theme descriptions removing third-party brand names and highlighting the native Monet dynamic extraction engine.
+
+---
+
+## 22. Podcast Favorites Drag-and-Drop Blank Screen Resolution
+
+### Problem Discovered
+When users tapped the "Reorder" button or long-pressed a favorite podcast tile on the `/bookshelf/favorites` page to drag and drop icons, the entire screen below the top toolbar went blank.
+
+### Root Cause Analysis
+1. **Template Condition Collision**:
+   The instruction notice (`<div v-if="isReordering && favoriteItems.length > 1">`) was placed directly preceding the main grid container (`<div v-else-if="favoriteItems.length">`). Because the notice used a top-level `v-if`, when `isReordering` became `true`, Vue matched the notice condition and **skipped the entire `v-else-if` block containing the grid**. The grid was completely unmounted from the DOM.
+2. **`vuedraggable` Model Mismatch & SortableJS Desync**:
+   `<draggable>` had `v-model="favoriteItems"`, but the inner loop iterated over the computed property `displayedItems` (`v-for="item in displayedItems"`). When SortableJS triggered DOM mutations on drag, index mismatches between the rendered VNodes and `favoriteItems` caused DOM patch collisions.
+3. **Event Bus Re-render Conflict**:
+   On drag completion, `persistFavoritesOrder()` emitted `'podcast-favorites-changed'`, which was caught by `favorites.vue`'s own event listener, triggering an uncoordinated `loadFavorites()` network fetch while SortableJS was finalizing its drag transition.
+
+### Implementation
+- **Restructured Template Hierarchy (`pages/bookshelf/favorites.vue`)**:
+  - Wrapped the entire content state in `<div v-else-if="favoriteItems.length" class="flex-1 min-h-0 flex flex-col overflow-hidden">`.
+  - The reorder notice is now nested inside this container, preserving the grid in the DOM at all times.
+- **Dedicated Mode Separation**:
+  - **Normal Mode (`v-else`)**: Clean, native Vue grid iterating over `displayedItems` with active click navigation, long-press detection, and real-time search filtering. Zero SortableJS event overhead.
+  - **Reorder Mode (`v-if="isReordering"`)**: Isolated `<draggable>` instance bound strictly 1:1 to `favoriteItems` (`v-for="item in favoriteItems"`), with `touchStartThreshold: 5`, `delay: 50`, `delayOnTouchOnly: true`, and quick-remove buttons.
+- **Persistence Lock Guard**:
+  - Introduced `isPersistingLocally` flag during order saving to prevent `favorites.vue` from triggering redundant server reloads while actively reordering.
+  - Automatically resets search query and closes search bar upon entering reorder mode for a clean editing canvas.
+
+---
+
+### 24. GitHub Actions CI/CD Audit & Build Pipeline Optimization
+
+### Overview & Issues Identified
+An audit of GitHub Actions on repository [`cavant/CharcuterieShelf`](https://github.com/cavant/CharcuterieShelf) revealed failing runs across three primary automated workflows:
+1. **`Verify all i18n files are alphabetized` (`i18n-check.yml`)**:
+   - *Failure Reason*: The action `audiobookshelf/audiobookshelf-i18n-updater@v1.3.0` failed with `Keys are not alphabetized in en-us.json`. In addition, the `push:` trigger had no path filter, running on every commit regardless of whether translations changed.
+2. **`Build APK` (`build-apk.yml`)**:
+   - *Failure Reason*: `./android/gradlew: Permission denied` (exit code 126). Git tracking on Windows platforms did not preserve Unix executable flags.
+3. **`Publish Test App` (`deploy-apk.yml`)**:
+   - *Failure Reason 1*: `./android/gradlew: Permission denied` (exit code 126).
+   - *Failure Reason 2*: `actions/deploy-pages@v4` threw HTTP `404 Not Found` because GitHub Pages was not provisioned for the repository.
+
+### Solutions & Improvements Implemented
+- **Automated i18n Alphabetization**:
+  - Alphabetized and sorted all keys across 46 localization JSON files in `strings/*.json`.
+  - Added `paths: ['strings/**']` trigger filter to `.github/workflows/i18n-check.yml` to eliminate redundant pipeline runs on non-translation changes.
+- **Android Gradle Wrapper Executable Permissions**:
+  - Configured git file mode to executable (`100755`) for `android/gradlew` via `git update-index --chmod=+x android/gradlew`.
+  - Added explicit defensive step `chmod +x ./android/gradlew` in GitHub Actions workflow definitions before invocation.
+- **Automated Continuous Delivery & GitHub Pages Deployment**:
+  - Enabled GitHub Pages via GitHub API configured with `build_type: "workflow"`.
+  - Rebranded `.github/testing-page-template.html` to `CharcuterieShelf :: Testers` linking directly to `cavant/CharcuterieShelf`.
+  - Upgraded GitHub Actions steps to `@v4` standards and standardized artifact naming to `CharcuterieShelf-${build}.apk`.
+
+### CI/CD Verification Results
+All GitHub Actions pipelines achieved 100% green status on commit `727a6b2`:
+- **Verify all i18n files are alphabetized**: ✅ **SUCCESS** (Run `34430336962`)
+- **Build APK**: ✅ **SUCCESS** (Run `34430336978`)
+- **Publish Test App**: ✅ **SUCCESS** (Run `34430336995`)
+- **Live Testers Website**: ✅ **ONLINE & DEPLOYED** at [https://cavant.github.io/CharcuterieShelf/](https://cavant.github.io/CharcuterieShelf/) serving automated test APK builds directly.
+
+---
+
+---
+
+## 25. Android 13–16 Platform Readiness, Documentation Alignment & Skill Maintenance
+
+### 1. Android Auto Documentation Alignment
+- **Inherited Upstream Feature**: Android Auto is a native feature inherited directly from upstream Audiobookshelf (`MediaBrowserServiceCompat`).
+- **Cleaned Public Descriptions**:
+  - Removed dedicated Android Auto feature section and intro highlights from [`readme.md`](file:///c:/audiobookshelf_app/readme.md).
+  - Updated [`C:\audiobookshelf-docs\src\components\CommunityAppsPage\communityAppsData.js`](file:///C:/audiobookshelf-docs/src/components/CommunityAppsPage/communityAppsData.js) removing `'AAOS'` and `Android Auto support` from the CharcuterieShelf listing.
+  - Clarified in [`AGENTS.md`](file:///c:/audiobookshelf_app/AGENTS.md) that Android Auto is an inherited core capability to prevent future agent misattributions.
+
+### 2. Outside Sources & Google Play Pitfalls Audit
+1. **Granular Media Permissions on Android 13+ (API 33+)**:
+   - Google Play policy flags apps targeting API 33+ that declare `READ_EXTERNAL_STORAGE` without `maxSdkVersion="32"`.
+   - Updated [`android/app/src/main/AndroidManifest.xml`](file:///c:/audiobookshelf_app/android/app/src/main/AndroidManifest.xml):
+     - Added `android:maxSdkVersion="32"` to `android.permission.READ_EXTERNAL_STORAGE`.
+     - Added `<uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />`.
+   - Updated [`MainActivity.kt`](file:///c:/audiobookshelf_app/android/app/src/main/java/com/audiobookshelf/app/MainActivity.kt) `requestNeededPermissions()` to dynamically request `READ_MEDIA_AUDIO` on `Build.VERSION_CODES.TIRAMISU`+ and `READ_EXTERNAL_STORAGE` on older APIs.
+2. **16 KB Memory Page Size Support (Android 15 / 16)**:
+   - Google Play mandates 16 KB page size compatibility for apps targeting Android 15+ by 2026/2027.
+   - Inspected release APK binaries: confirmed CharcuterieShelf contains **0 unaligned NDK `.so` libraries**, relying purely on managed Kotlin/Java and Webview. Inherent 16 KB page compatibility is satisfied.
+3. **Google Play 14-Day Closed Testing**:
+   - Confirmed Google Play personal developer accounts require 12–20 testers opted in for 14 continuous days. Documented in `readme.md` and tester request templates.
+
+### 3. QA Harness & Skill Synchronization
+- Updated `tests/branding/manifest-branding.test.mjs` with assertions for `READ_MEDIA_AUDIO`, `READ_EXTERNAL_STORAGE` `maxSdkVersion="32"`, and 16 KB page size architecture compliance.
+- Synchronized [`.agents/skills/charcuterieshelf-qa-review/SKILL.md`](file:///c:/audiobookshelf_app/.agents/skills/charcuterieshelf-qa-review/SKILL.md) and [`.gemini/skills/charcuterieshelf-qa-review/SKILL.md`](file:///c:/audiobookshelf_app/.gemini/skills/charcuterieshelf-qa-review/SKILL.md).
+- Verified full verification suite: 10 / 10 suites passed in 1.68s, followed by native Android Kotlin compilation (`BUILD SUCCESSFUL in 25s`).
+
+---
+
+## 26. Android Auto Driving Restriction ("Isn't Available While Driving") & Sideload Enabler Compatibility
+
+### Root Cause Analysis
+1. **Google Automotive Driver Distraction Policy**:
+   - In Android Auto (`Gearhead`), Google enforces strict safety rules regarding the origin/installer package of applications that register an automotive service (`com.google.android.gms.car.application` / `MediaBrowserService`).
+   - When an app is sideloaded (installed via browser, downloaded APK, or default package installer), the system package manager does not assign `com.android.vending` (Google Play Store) as the installer package.
+   - Even when "Unknown sources" is checked in Android Auto Developer Settings, Android Auto restricts full interaction or browsing while the vehicle is in gear or driving, presenting the warning: **"isn't available while driving"**.
+   - Media playback itself (mini-player controls at the bottom) still works because ExoPlayer's `MediaSessionCompat` is active, but clicking the app to open the full UI is blocked by the driver distraction filter.
+
+2. **In-Code Fixes in CharcuterieShelf (`v0.14.10-beta`)**:
+   - **`distractionOptimized="true"` Manifest Declaration**: Added `<meta-data android:name="distractionOptimized" android:value="true" />` at both the `<application>` level and `<activity android:name=".MainActivity">` level in `AndroidManifest.xml`. This informs Android Auto and Android Automotive OS that the application meets driving distraction safety guidelines.
+   - **Session Activity Handshake**: Maintained `sessionActivityPendingIntent` on `mediaSession` so the system media session handshake with Android Auto remains intact.
+   - **Deterministic JDK 21 in Gradle**: Added `org.gradle.java.home=C:\\Java\\jdk-21` to `android/gradle.properties` so release APKs and Google Play AAB bundles compile with Java 21 without depending on shell environment path quirks.
+
+3. **Android Auto Enabler Utilities (Sideload Workaround)**:
+   - For sideloaded installs prior to Google Play Store distribution, users can install `CharcuterieShelf.apk` using:
+     - **AAEnabler** (`malebuffy/AAEnabler` on GitHub): Selects local APK and installs it with the Google Play installer tag.
+     - **KingInstaller** (`fcaronte/KingInstaller` on GitHub): Installs any local APK while spoofing `com.android.vending` as the source.
+     - **ADB**: `adb shell pm install -i "com.android.vending" -r CharcuterieShelf.apk`
+   - Once installed via an enabler or ADB (or via the official Google Play Closed Testing track), Android Auto recognizes the package as originating from Google Play and completely unlocks it while driving!
+
+
