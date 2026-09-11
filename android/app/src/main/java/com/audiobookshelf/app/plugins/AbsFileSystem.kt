@@ -295,13 +295,36 @@ class AbsFileSystem : Plugin() {
       return call.resolve(JSObject("{\"success\":false}"))
     }
 
-    val docfile = DocumentFileCompat.fromUri(mainActivity, Uri.parse(contentUrl))
-    val success = docfile?.delete() == true
+    var success = false
+    try {
+      if (contentUrl.startsWith("file://") || contentUrl.startsWith("/")) {
+        val filePath = if (contentUrl.startsWith("file://")) Uri.parse(contentUrl).path else contentUrl
+        if (!filePath.isNullOrEmpty()) {
+          val file = File(filePath)
+          success = if (file.exists()) file.delete() else true
+        }
+      } else if (contentUrl.isNotEmpty()) {
+        val docfile = DocumentFileCompat.fromUri(mainActivity, Uri.parse(contentUrl))
+        success = docfile?.delete() == true
+      } else {
+        // If contentUrl is empty, consider file removed
+        success = true
+      }
+    } catch (e: Exception) {
+      Log.w(tag, "deleteTrackFromItem: Error deleting file: ${e.message}")
+    }
+
     if (success) {
       localLibraryItem.media.removeAudioTrack(trackLocalFileId)
       localLibraryItem.removeLocalFile(trackLocalFileId)
-      DeviceManager.dbManager.saveLocalLibraryItem(localLibraryItem)
-      call.resolve(JSObject(jacksonMapper.writeValueAsString(localLibraryItem)))
+      if (localLibraryItem.localFiles.isEmpty() || localLibraryItem.media.getAudioTracks().isEmpty()) {
+        DeviceManager.dbManager.removeLocalLibraryItem(localLibraryItemId)
+        Log.d(tag, "deleteTrackFromItem: Removed empty localLibraryItem $localLibraryItemId")
+        call.resolve(JSObject("{\"id\":\"$localLibraryItemId\",\"removed\":true,\"localFiles\":[]}"))
+      } else {
+        DeviceManager.dbManager.saveLocalLibraryItem(localLibraryItem)
+        call.resolve(JSObject(jacksonMapper.writeValueAsString(localLibraryItem)))
+      }
     } else {
       call.resolve(JSObject("{\"success\":false}"))
     }

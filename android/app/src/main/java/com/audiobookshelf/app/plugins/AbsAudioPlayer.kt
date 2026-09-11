@@ -115,6 +115,14 @@ class AbsAudioPlayer : Plugin() {
         override fun onPlaybackSpeedChanged(playbackSpeed:Float) {
           emit("onPlaybackSpeedChanged", playbackSpeed)
         }
+
+        override fun onLocalEpisodeDeleted(localLibraryItemId: String, localEpisodeId: String, serverEpisodeId: String) {
+          val ret = JSObject()
+          ret.put("localLibraryItemId", localLibraryItemId)
+          ret.put("localEpisodeId", localEpisodeId)
+          ret.put("serverEpisodeId", serverEpisodeId)
+          notifyListeners("onLocalEpisodeDeleted", ret)
+        }
       })
 
       MediaEventManager.clientEventEmitter = playerNotificationService.clientEventEmitter

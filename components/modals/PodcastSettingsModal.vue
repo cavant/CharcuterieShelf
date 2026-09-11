@@ -65,6 +65,18 @@
           <ui-toggle-switch v-model="skipSilence" />
         </div>
 
+        <!-- Auto-Delete Played Episodes -->
+        <div class="bg-primary/40 rounded-xl p-4 border border-border/50 flex items-center justify-between">
+          <div class="flex-1 pr-4">
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="material-symbols text-fg text-lg">auto_delete</span>
+              <p class="text-sm font-semibold text-fg">Auto-Delete Played Episodes</p>
+            </div>
+            <p class="text-xs text-fg-muted">Automatically remove downloaded episodes from this device when playback finishes.</p>
+          </div>
+          <ui-toggle-switch v-model="autoDelete" />
+        </div>
+
         <!-- Custom Playback Speed -->
         <div class="bg-primary/40 rounded-xl p-4 border border-border/50">
           <div class="flex items-center justify-between mb-1">
@@ -115,6 +127,7 @@ export default {
       skipFirst: 0,
       skipLast: 0,
       skipSilence: false,
+      autoDelete: true,
       customSpeed: null,
       speedOptions: [
         { label: 'Global', value: null },
@@ -167,11 +180,13 @@ export default {
         this.skipFirst = saved.skipFirst || 0
         this.skipLast = saved.skipLast || 0
         this.skipSilence = !!saved.skipSilence
+        this.autoDelete = saved.autoDelete !== undefined ? !!saved.autoDelete : true
         this.customSpeed = saved.customSpeed || null
       } else {
         this.skipFirst = 0
         this.skipLast = 0
         this.skipSilence = false
+        this.autoDelete = true
         this.customSpeed = null
       }
     },
@@ -180,6 +195,7 @@ export default {
         skipFirst: this.skipFirst,
         skipLast: this.skipLast,
         skipSilence: this.skipSilence,
+        autoDelete: this.autoDelete,
         customSpeed: this.customSpeed
       }
       if (this.libraryItemId) {

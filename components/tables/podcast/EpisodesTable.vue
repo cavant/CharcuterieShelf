@@ -142,7 +142,8 @@ export default {
       rssFeedEpisodes: [], // Full RSS feed episodes merged into the main list
       showPodcastEpisodeFeed: false,
       episodesDownloading: [],
-      episodeDownloadsQueued: []
+      episodeDownloadsQueued: [],
+      deletedLocalEpisodeIds: []
     }
   },
   watch: {
@@ -151,6 +152,9 @@ export default {
       handler() {
         this.init()
       }
+    },
+    localEpisodes() {
+      this.deletedLocalEpisodeIds = []
     }
   },
   computed: {
@@ -357,6 +361,9 @@ export default {
     localEpisodeMap() {
       var epmap = {}
       this.localEpisodes.forEach((localEp) => {
+        if (this.deletedLocalEpisodeIds.includes(localEp.id) || (localEp.serverEpisodeId && this.deletedLocalEpisodeIds.includes(localEp.serverEpisodeId))) {
+          return
+        }
         if (localEp.serverEpisodeId) {
           epmap[localEp.serverEpisodeId] = localEp
         }
@@ -523,6 +530,15 @@ export default {
         this.episodeDownloadsQueued = this.episodeDownloadsQueued.filter((d) => d.id !== episodeDownload.id)
         this.episodesDownloading = this.episodesDownloading.filter((d) => d.id !== episodeDownload.id)
       }
+    },
+    onLocalEpisodeDeleted(data) {
+      if (!data) return
+      if (data.localEpisodeId && !this.deletedLocalEpisodeIds.includes(data.localEpisodeId)) {
+        this.deletedLocalEpisodeIds.push(data.localEpisodeId)
+      }
+      if (data.serverEpisodeId && !this.deletedLocalEpisodeIds.includes(data.serverEpisodeId)) {
+        this.deletedLocalEpisodeIds.push(data.serverEpisodeId)
+      }
     }
   },
   mounted() {
@@ -532,6 +548,7 @@ export default {
     this.$socket.$on('episode_download_queued', this.episodeDownloadQueued)
     this.$socket.$on('episode_download_started', this.episodeDownloadStarted)
     this.$socket.$on('episode_download_finished', this.episodeDownloadFinished)
+    this.$eventBus.$on('local-episode-deleted', this.onLocalEpisodeDeleted)
 
     // Auto-fetch RSS feed to show full episode catalog inline (Pocket Casts style)
     this.fetchRSSFeedInline()
@@ -540,6 +557,7 @@ export default {
     this.$socket.$off('episode_download_queued', this.episodeDownloadQueued)
     this.$socket.$off('episode_download_started', this.episodeDownloadStarted)
     this.$socket.$off('episode_download_finished', this.episodeDownloadFinished)
+    this.$eventBus.$off('local-episode-deleted', this.onLocalEpisodeDeleted)
   }
 }
 </script>

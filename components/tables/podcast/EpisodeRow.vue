@@ -43,7 +43,12 @@
 
         <!-- Download Section (Device-only storage) -->
         <div v-if="userCanDownload" class="flex items-center">
-          <span v-if="isLocal || localEpisode" class="material-symbols px-2 text-success text-2xl leading-none">download_done</span>
+          <span
+            v-if="isLocal || localEpisode"
+            class="material-symbols px-2 text-success text-2xl leading-none cursor-pointer hover:text-error transition-colors"
+            title="Downloaded (tap to delete)"
+            @click.stop="deleteDownloadClick"
+          >download_done</span>
           <span v-else class="material-symbols mx-1.5 text-2xl leading-none cursor-pointer" :class="downloadItem || startingDownload ? 'animate-bounce text-warning text-opacity-75' : 'text-fg-muted hover:text-fg'" @click.stop="downloadClick">
             {{ downloadItem || startingDownload ? 'downloading' : 'download' }}
           </span>
@@ -63,6 +68,7 @@
 </template>
 
 <script>
+import { Dialog } from '@capacitor/dialog'
 import { AbsFileSystem, AbsDownloader } from '@/plugins/capacitor'
 import cellularPermissionHelpers from '@/mixins/cellularPermissionHelpers'
 import { parseDuration } from '@/utils/playbackUtils'
@@ -304,6 +310,65 @@ export default {
         var errorMsg = downloadRes.error || 'Unknown error'
         console.error('Download error', errorMsg)
         this.$toast.error(errorMsg)
+      }
+    },
+    async deleteDownloadClick() {
+      await this.$hapticsImpact()
+      const { value } = await Dialog.confirm({
+        title: this.$strings.HeaderConfirm || 'Confirm Delete',
+        message: `Remove downloaded episode "${this.title}" from this device?`
+      })
+      if (!value) return
+
+      this.processing = true
+      try {
+        let localLibraryItemId = this.isLocal ? this.libraryItemId : this.localLibraryItemId
+        let localEpisode = this.isLocal ? this.episode : this.localEpisode
+        let audioTrack = localEpisode?.audioTrack
+
+        // Fallback: If local item or audioTrack is missing, query from DB
+        if (!localLibraryItemId || !audioTrack) {
+          const lli = await this.$db.getLocalLibraryItemByLId(this.libraryItemId)
+          if (lli) {
+            localLibraryItemId = lli.id
+            const ep = lli.media?.episodes?.find((e) => e.serverEpisodeId === this.effectiveEpisodeId || e.id === this.effectiveEpisodeId)
+            if (ep) {
+              localEpisode = ep
+              audioTrack = ep.audioTrack
+            }
+          }
+        }
+
+        if (!localLibraryItemId || !audioTrack) {
+          this.$toast.error('Could not find local audio file to remove')
+          this.processing = false
+          return
+        }
+
+        const localFileId = audioTrack.localFileId
+        const contentUrl = audioTrack.contentUrl
+
+        const res = await AbsFileSystem.deleteTrackFromItem({
+          id: localLibraryItemId,
+          trackLocalFileId: localFileId,
+          trackContentUrl: contentUrl
+        })
+
+        if (res?.id || res?.success || res?.removed) {
+          this.$toast.success('Downloaded episode removed')
+          this.$eventBus.$emit('local-episode-deleted', {
+            localLibraryItemId,
+            localEpisodeId: localEpisode?.id,
+            serverEpisodeId: this.effectiveEpisodeId
+          })
+        } else {
+          this.$toast.error('Failed to remove download')
+        }
+      } catch (err) {
+        console.error('Failed to delete download', err)
+        this.$toast.error('Failed to delete download')
+      } finally {
+        this.processing = false
       }
     },
     async playClick() {

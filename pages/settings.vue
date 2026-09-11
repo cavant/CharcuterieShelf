@@ -181,6 +181,16 @@
       </div>
     </div>
 
+    <!-- Podcast Settings -->
+    <p class="uppercase text-xs font-semibold text-fg-muted mb-2 mt-10">Podcasts & Downloads</p>
+    <div class="flex items-center py-3">
+      <div class="w-10 flex justify-center" @click="toggleAutoDeletePlayedPodcasts">
+        <ui-toggle-switch v-model="settings.autoDeletePlayedPodcasts" @input="saveSettings" />
+      </div>
+      <p class="pl-4">Auto-Delete Played Podcasts</p>
+      <span class="material-symbols text-xl ml-2 cursor-pointer" @click.stop="showInfo('autoDeletePlayedPodcasts')">info</span>
+    </div>
+
     <!-- Android Auto settings -->
     <template v-if="!isiOS">
       <p class="uppercase text-xs font-semibold text-fg-muted mb-2 mt-10">{{ $strings.HeaderAndroidAutoSettings }}</p>
@@ -399,7 +409,8 @@ export default {
         downloadUsingCellular: 'ALWAYS',
         streamingUsingCellular: 'ALWAYS',
         androidAutoBrowseLimitForGrouping: 100,
-        androidAutoBrowseSeriesSequenceOrder: 'ASC'
+        androidAutoBrowseSeriesSequenceOrder: 'ASC',
+        autoDeletePlayedPodcasts: true
       },
       theme: 'dark',
       customAccent: '',
@@ -416,6 +427,10 @@ export default {
       ],
       lockCurrentOrientation: false,
       settingInfo: {
+        autoDeletePlayedPodcasts: {
+          name: 'Auto-Delete Played Podcasts',
+          message: 'Automatically delete downloaded podcast audio files from your device when playback reaches the end.'
+        },
         disableShakeToResetSleepTimer: {
           name: this.$strings.LabelDisableShakeToReset,
           message: this.$strings.LabelDisableShakeToResetHelp
@@ -905,6 +920,10 @@ export default {
       this.settings.allowSeekingOnMediaControls = !this.settings.allowSeekingOnMediaControls
       this.saveSettings()
     },
+    toggleAutoDeletePlayedPodcasts() {
+      this.settings.autoDeletePlayedPodcasts = !this.settings.autoDeletePlayedPodcasts
+      this.saveSettings()
+    },
     getCurrentOrientation() {
       const orientation = window.screen?.orientation || {}
       const type = orientation.type || ''
@@ -937,6 +956,7 @@ export default {
       this.settings.disableAutoRewind = !!deviceSettings.disableAutoRewind
       this.settings.enableAltView = !!deviceSettings.enableAltView
       this.settings.allowSeekingOnMediaControls = !!deviceSettings.allowSeekingOnMediaControls
+      this.settings.autoDeletePlayedPodcasts = deviceSettings.autoDeletePlayedPodcasts !== undefined ? !!deviceSettings.autoDeletePlayedPodcasts : true
       this.settings.jumpForwardTime = deviceSettings.jumpForwardTime || 10
       this.settings.jumpBackwardsTime = deviceSettings.jumpBackwardsTime || 10
       this.settings.enableMp3IndexSeeking = !!deviceSettings.enableMp3IndexSeeking

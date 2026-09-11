@@ -970,6 +970,10 @@ export default {
       this.currentPlaybackRate = Number(data.value)
       this.updateTimestamp()
     },
+    onLocalEpisodeDeleted(data) {
+      console.log('[AudioPlayer] onLocalEpisodeDeleted received:', data)
+      this.$eventBus.$emit('local-episode-deleted', data)
+    },
     async init() {
       await this.loadPlayerSettings()
 
@@ -981,6 +985,7 @@ export default {
       AbsAudioPlayer.addListener('onProgressSyncFailing', this.showProgressSyncIsFailing)
       AbsAudioPlayer.addListener('onProgressSyncSuccess', this.showProgressSyncSuccess)
       AbsAudioPlayer.addListener('onPlaybackSpeedChanged', this.onPlaybackSpeedChanged)
+      AbsAudioPlayer.addListener('onLocalEpisodeDeleted', this.onLocalEpisodeDeleted)
     },
     async screenOrientationChange() {
       if (this.isRefreshingUI) return

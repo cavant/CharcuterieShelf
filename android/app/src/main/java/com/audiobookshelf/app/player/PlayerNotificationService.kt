@@ -52,6 +52,8 @@ import com.google.android.exoplayer2.source.ProgressiveMediaSource
 import com.google.android.exoplayer2.source.hls.HlsMediaSource
 import com.google.android.exoplayer2.ui.PlayerNotificationManager
 import com.google.android.exoplayer2.upstream.*
+import com.anggrayudi.storage.file.DocumentFileCompat
+import java.io.File
 import java.util.*
 import kotlin.concurrent.schedule
 import kotlinx.coroutines.CoroutineScope
@@ -92,6 +94,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     fun onNetworkMeteredChanged(isUnmetered: Boolean)
     fun onMediaItemHistoryUpdated(mediaItemHistory: MediaItemHistory)
     fun onPlaybackSpeedChanged(playbackSpeed: Float)
+    fun onLocalEpisodeDeleted(localLibraryItemId: String, localEpisodeId: String, serverEpisodeId: String)
   }
   private val binder = LocalBinder()
 
@@ -641,8 +644,115 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     }
   }
 
+  fun deletePlayedPodcastDownload(session: PlaybackSession) {
+    if (!session.isPodcastEpisode) return
+
+    val globalAutoDelete = DeviceManager.deviceData.deviceSettings?.autoDeletePlayedPodcasts != false
+    var shouldDelete = globalAutoDelete
+
+    val podcastId = session.libraryItemId ?: session.localLibraryItem?.libraryItemId ?: session.localLibraryItem?.id
+    if (!podcastId.isNullOrEmpty()) {
+      try {
+        val sharedPrefs = ctx.getSharedPreferences("CapacitorStorage", Context.MODE_PRIVATE)
+        val settingsJson = sharedPrefs?.getString("podcast_settings_$podcastId", null)
+        if (settingsJson != null) {
+          val parsed = org.json.JSONObject(settingsJson)
+          if (parsed.has("autoDelete")) {
+            shouldDelete = parsed.getBoolean("autoDelete")
+          }
+        }
+      } catch (e: Exception) {
+        Log.w(tag, "deletePlayedPodcastDownload: error reading podcast settings: ${e.message}")
+      }
+    }
+
+    if (!shouldDelete) {
+      Log.d(tag, "deletePlayedPodcastDownload: autoDelete is disabled for podcast, skipping")
+      return
+    }
+
+    // Resolve the local library item
+    val localItem: LocalLibraryItem? = session.localLibraryItem
+      ?: (session.localLibraryItemId.takeIf { it.isNotEmpty() }?.let { DeviceManager.dbManager.getLocalLibraryItem(it) })
+      ?: (session.libraryItemId?.let { DeviceManager.dbManager.getLocalLibraryItemByLId(it) })
+      ?: (session.episodeId?.let { epId ->
+        DeviceManager.dbManager.getLocalLibraryItems("podcast").find { lli ->
+          (lli.media as? Podcast)?.episodes?.any { it.serverEpisodeId == epId || it.id == epId } == true
+        }
+      })
+
+    if (localItem == null) {
+      Log.d(tag, "deletePlayedPodcastDownload: No local item found for session")
+      return
+    }
+
+    val podcastMedia = localItem.media as? Podcast
+    val episodes = podcastMedia?.episodes
+    val targetEpisode = episodes?.find { ep ->
+      (session.localEpisodeId != null && ep.id == session.localEpisodeId) ||
+      (session.episodeId != null && (ep.serverEpisodeId == session.episodeId || ep.id == session.episodeId))
+    }
+
+    if (targetEpisode == null) {
+      Log.d(tag, "deletePlayedPodcastDownload: Target episode not found in local item")
+      return
+    }
+
+    val audioTrack = targetEpisode.audioTrack
+    val localFileId = audioTrack?.localFileId
+    val contentUrl = audioTrack?.contentUrl ?: targetEpisode.audioFile?.metadata?.path ?: ""
+
+    Log.d(tag, "deletePlayedPodcastDownload: Deleting local episode ${targetEpisode.id}, track=$localFileId, url=$contentUrl")
+
+    try {
+      var fileDeleted = false
+      if (contentUrl.startsWith("file://") || contentUrl.startsWith("/")) {
+        val filePath = if (contentUrl.startsWith("file://")) Uri.parse(contentUrl).path else contentUrl
+        if (!filePath.isNullOrEmpty()) {
+          val file = File(filePath)
+          fileDeleted = if (file.exists()) file.delete() else true
+        }
+      } else if (contentUrl.isNotEmpty()) {
+        val docfile = DocumentFileCompat.fromUri(ctx, Uri.parse(contentUrl))
+        fileDeleted = docfile?.delete() == true
+      } else {
+        fileDeleted = true
+      }
+
+      if (fileDeleted) {
+        if (!localFileId.isNullOrEmpty()) {
+          localItem.media.removeAudioTrack(localFileId)
+          localItem.removeLocalFile(localFileId)
+        } else {
+          episodes.removeIf { it.id == targetEpisode.id }
+        }
+
+        if (localItem.localFiles.isEmpty() || localItem.media.getAudioTracks().isEmpty() || (localItem.media as? Podcast)?.episodes.isNullOrEmpty()) {
+          DeviceManager.dbManager.removeLocalLibraryItem(localItem.id)
+          Log.d(tag, "deletePlayedPodcastDownload: Removed empty localLibraryItem ${localItem.id}")
+        } else {
+          DeviceManager.dbManager.saveLocalLibraryItem(localItem)
+          Log.d(tag, "deletePlayedPodcastDownload: Saved updated localLibraryItem ${localItem.id}")
+        }
+
+        val serverEpisodeId = session.episodeId ?: targetEpisode.serverEpisodeId ?: ""
+        clientEventEmitter?.onLocalEpisodeDeleted(localItem.id, targetEpisode.id, serverEpisodeId)
+        Log.i(tag, "deletePlayedPodcastDownload: Successfully removed played podcast download ${targetEpisode.id}")
+      } else {
+        Log.w(tag, "deletePlayedPodcastDownload: Could not delete audio file $contentUrl")
+      }
+    } catch (e: Exception) {
+      Log.e(tag, "deletePlayedPodcastDownload error: ${e.message}", e)
+    }
+  }
+
   fun handlePlaybackEnded() {
     Log.d(tag, "handlePlaybackEnded")
+    currentPlaybackSession?.let { session ->
+      if (session.isPodcastEpisode) {
+        deletePlayedPodcastDownload(session)
+      }
+    }
     if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
       Log.d(tag, "Podcast playback ended on android auto")
       val libraryItem = currentPlaybackSession?.libraryItem ?: return

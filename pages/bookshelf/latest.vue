@@ -109,11 +109,13 @@ export default {
     this.$eventBus.$on('library-changed', this.libraryChanged)
     this.$eventBus.$on('new-local-library-item', this.newLocalLibraryItem)
     this.$eventBus.$on('podcast-subscription-changed', () => this.loadRecentEpisodes(0))
+    this.$eventBus.$on('local-episode-deleted', this.loadLocalPodcastLibraryItems)
   },
   beforeDestroy() {
     this.$eventBus.$off('library-changed', this.libraryChanged)
     this.$eventBus.$off('new-local-library-item', this.newLocalLibraryItem)
     this.$eventBus.$off('podcast-subscription-changed', () => this.loadRecentEpisodes(0))
+    this.$eventBus.$off('local-episode-deleted', this.loadLocalPodcastLibraryItems)
   }
 }
 </script>

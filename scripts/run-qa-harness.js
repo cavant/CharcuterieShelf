@@ -59,7 +59,8 @@ if (runUnit) {
     { name: 'Playback Duration & Timestamp Parser', file: 'tests/unit/duration-parser.test.mjs', category: 'Frontend Unit' },
     { name: 'Podcast Favorites & Subscriptions Store', file: 'tests/unit/favorites-store.test.mjs', category: 'Frontend Unit' },
     { name: '14 Theme Palettes & Monet Engine', file: 'tests/unit/theming.test.mjs', category: 'Frontend Unit' },
-    { name: 'Download Queue & Recovery Logic', file: 'tests/unit/download-queue.test.mjs', category: 'Frontend Unit' }
+    { name: 'Download Queue & Recovery Logic', file: 'tests/unit/download-queue.test.mjs', category: 'Frontend Unit' },
+    { name: 'Podcast Auto-Delete & Manual Cleanup', file: 'tests/unit/podcast-auto-delete.test.mjs', category: 'Frontend Unit' }
   );
 }
 

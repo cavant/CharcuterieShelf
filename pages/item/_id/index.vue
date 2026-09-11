@@ -740,6 +740,13 @@ export default {
         this.$set(this.libraryItem, 'localLibraryItem', item)
       }
     },
+    async onLocalEpisodeDeleted(data) {
+      if (!data) return
+      if (this.localLibraryItemId === data.localLibraryItemId || (data.serverEpisodeId && this.episodes.some((e) => e.id === data.serverEpisodeId))) {
+        const localItem = await this.$db.getLocalLibraryItemByLId(this.libraryItemId)
+        this.$set(this.libraryItem, 'localLibraryItem', localItem || null)
+      }
+    },
     libraryChanged(libraryId) {
       if (this.libraryItem.libraryId !== libraryId) {
         this.$router.replace('/bookshelf')
@@ -822,6 +829,7 @@ export default {
       window.addEventListener('resize', this.windowResized)
       this.$eventBus.$on('library-changed', this.libraryChanged)
       this.$eventBus.$on('new-local-library-item', this.newLocalLibraryItem)
+      this.$eventBus.$on('local-episode-deleted', this.onLocalEpisodeDeleted)
       this.$socket.$on('item_updated', this.itemUpdated)
       this.$socket.$on('rss_feed_open', this.rssFeedOpen)
       this.$socket.$on('rss_feed_closed', this.rssFeedClosed)
@@ -877,6 +885,7 @@ export default {
     window.removeEventListener('resize', this.windowResized)
     this.$eventBus.$off('library-changed', this.libraryChanged)
     this.$eventBus.$off('new-local-library-item', this.newLocalLibraryItem)
+    this.$eventBus.$off('local-episode-deleted', this.onLocalEpisodeDeleted)
     this.$socket.$off('item_updated', this.itemUpdated)
     this.$socket.$off('rss_feed_open', this.rssFeedOpen)
     this.$socket.$off('rss_feed_closed', this.rssFeedClosed)
