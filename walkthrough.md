@@ -542,3 +542,30 @@ All GitHub Actions pipelines achieved 100% green status on commit `727a6b2`:
 - **Native Android Compilation (`assembleRelease bundleRelease`)**: Signed release APK (`app-release.apk`, 16.2 MB) and Google Play AAB bundle (`app-release.aab`, 15.6 MB) built successfully with JDK 21 in 1m 1s.
 - **Cloud Distribution Sync**: Copied `CharcuterieShelf.apk` and `CharcuterieShelf.aab` to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
 - **GitHub Release Live**: Published release `v0.14.12-beta` with `CharcuterieShelf.apk` attached and set as the latest release.
+
+---
+
+## 29. Android Auto Car Screen Isolation Root-Cause Fix (v0.14.13-beta)
+
+### Problem Solved
+1. Despite removing `distractionOptimized` and adding `mediaSession.setSessionActivity(null)` in `onGetRoot()` in v0.14.12-beta, tapping CharcuterieShelf on the car screen was still launching `MainActivity` on the phone screen.
+2. **Race Condition in `MediaSessionCompat` Initialization**: In `PlayerNotificationService.kt:onCreate()`, `mediaSession.setSessionActivity(sessionActivityPendingIntent)` was being called upon creation. Android Auto's `MediaController` queries the session activity during initial service binding, before `onGetRoot()` has finished executing, caching the `MainActivity` pending intent.
+3. **`MEDIA_PLAY_FROM_SEARCH` Activity Intent Filter**: In `AndroidManifest.xml`, `MainActivity` declared an `<intent-filter>` for `android.media.action.MEDIA_PLAY_FROM_SEARCH`. Android Auto resolves media activities and would trigger `MainActivity` on the connected phone rather than delegating to the background `MediaBrowserServiceCompat`.
+
+### Changes Applied
+1. **Never Set `sessionActivity` on MediaSession (`PlayerNotificationService.kt`)**:
+   - Eliminated `setSessionActivity(sessionActivityPendingIntent)` from `mediaSession` instantiation in `onCreate()`.
+   - `mediaSession.sessionActivity` is `null` from the moment of creation, completely removing any launchable phone activity metadata exposed to Android Auto.
+   - Kept `mediaSession.setSessionActivity(null)` in `onGetRoot()` as a defensive guard.
+   - Phone notification tap functionality is 100% preserved because `AbMediaDescriptionAdapter.kt` reads `sessionActivityPendingIntent` directly from `playerNotificationService`.
+2. **Removed `MEDIA_PLAY_FROM_SEARCH` Intent Filter from `MainActivity` (`AndroidManifest.xml`)**:
+   - Removed the activity-level search intent filter so Android Auto never attempts to resolve `MainActivity` for media actions.
+   - Search playback is handled natively in the background by `MediaSessionCompat.Callback.onPlayFromSearch()` in `PlayerNotificationService.kt`.
+
+### Verification Results
+- **Automated QA Harness (`npm run test:qa`)**: All 11 verification suites passed (1.86s).
+- **Nuxt Static Generation (`npm run generate`)**: All routes compiled and static HTML generated cleanly.
+- **Native Android Compilation (`assembleRelease bundleRelease`)**: Signed release APK (`app-release.apk`, 16.2 MB) and Play Store bundle (`app-release.aab`, 15.6 MB) built successfully in 1m 4s with JDK 21.
+- **Cloud Distribution Sync**: Copied `CharcuterieShelf.apk` and `CharcuterieShelf.aab` to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
+- **GitHub Release Live**: Published release `v0.14.13-beta` with `CharcuterieShelf.apk` attached and marked as latest release.
+
