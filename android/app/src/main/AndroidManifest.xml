@@ -59,7 +59,11 @@
             android:resource="@drawable/icon_monochrome" />
         <meta-data
             android:name="com.google.android.gms.car.application"
-            android:resource="@xml/automotive_app_desc" /> <!-- Support for Cast -->
+            android:resource="@xml/automotive_app_desc" />
+        <meta-data
+            android:name="distractionOptimized"
+            android:value="true" />
+        <!-- Support for Cast -->
         <meta-data
             android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
             android:value="com.audiobookshelf.app.CastOptionsProvider" />
@@ -71,6 +75,9 @@
             android:label="@string/title_activity_main"
             android:launchMode="singleTask"
             android:theme="@style/AppTheme.NoActionBarLaunch" >
+            <meta-data
+                android:name="distractionOptimized"
+                android:value="true" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

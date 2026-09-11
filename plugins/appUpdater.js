@@ -8,7 +8,7 @@ import { parseSemver, isNewerVersion } from '@/utils/semverUtils'
 export default (context, inject) => {
   const { app, $config } = context
   const state = Vue.observable({
-    currentVersion: $config?.version || app?.$config?.version || pkg.version || '0.14.9-beta',
+    currentVersion: $config?.version || app?.$config?.version || pkg.version || '0.14.10-beta',
     isChecking: false,
     updateAvailable: false,
     latestRelease: null,

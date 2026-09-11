@@ -1226,10 +1226,8 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
       isAndroidAuto = true
 
-      // When Android Auto or an automotive client connects, clear the mediaSession's sessionActivity.
-      // If sessionActivity points to MainActivity, Android Auto considers it a non-distraction-optimized
-      // phone UI and blocks interaction with "isn't available while driving".
-      mediaSession.setSessionActivity(null)
+      // Ensure mediaSession has valid sessionActivity with distraction-optimized MainActivity
+      sessionActivityPendingIntent?.let { mediaSession.setSessionActivity(it) }
 
       val extras = Bundle()
       extras.putBoolean(MediaConstants.BROWSER_SERVICE_EXTRAS_KEY_SEARCH_SUPPORTED, true)

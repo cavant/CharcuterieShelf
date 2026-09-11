@@ -102,7 +102,7 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 - **Granular Item Controls**: Individual **Retry** and **Cancel / Remove** actions on every active or failed media download.
 - **Global Batch Management**: 1-tap **Retry All Failed**, **Clear Failed**, and **Cancel All** batch controls.
 - **Collapsible File-by-File Breakdown**: Inspect individual files and parts within a multi-file audiobook with specific progress and error diagnostics.
-- **Safe Enclosure & CDN Auth Isolation**: Enclosure URLs starting with `http://` or `https://` are never prepended with the server address, the server's `Authorization: Bearer` header is never leaked to external third-party podcast CDNs, and requests include a clean mobile client `User-Agent` (`CharcuterieShelf/0.14.9`) to prevent CDN 403 Forbidden blocks.
+- **Safe Enclosure & CDN Auth Isolation**: Enclosure URLs starting with `http://` or `https://` are never prepended with the server address, the server's `Authorization: Bearer` header is never leaked to external third-party podcast CDNs, and requests include a clean mobile client `User-Agent` (`CharcuterieShelf/0.14.10`) to prevent CDN 403 Forbidden blocks.
 - **Sane Disk Headroom Reservation**: `tryReserve()` and `hasAvailableSpace()` use a fixed 100MB buffer rather than 5% total device storage (which previously blocked downloads on large 256GB/512GB drives).
 
 ### 2.6 In-App Update Detection & Installation from GitHub Releases
@@ -114,7 +114,8 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 ### 2.7 Android Auto In-Car Dashboard Playback (Inherited Upstream Feature)
 - **Inherited Upstream Capability**: MediaBrowserServiceCompat integration is inherited directly from upstream Audiobookshelf and works by default. Do not advertise or highlight Android Auto as a custom fork-exclusive differentiator in public readmes or feature lists.
 - **MediaBrowserServiceCompat Integration**: In-car dashboard playback, media browsing, and search support directly through Android Auto (`PlayerNotificationService.kt`).
-- **Driver Distraction & Safety Optimization**: When Android Auto connects, `mediaSession.setSessionActivity(null)` is set so Android Auto renders its native in-car Now Playing screen instead of trying to launch the phone's non-distraction-optimized `MainActivity` (which triggered the "isn't available while driving" restriction). `AbMediaDescriptionAdapter` preserves `sessionActivityPendingIntent` so phone notifications continue to launch `MainActivity`.
+- **Driver Distraction & Safety Optimization**: Declares `distractionOptimized="true"` on both `<application>` and `<activity android:name=".MainActivity">` in `AndroidManifest.xml` to satisfy Android Auto and Automotive OS driver safety guidelines.
+- **Sideload vs Google Play Distribution**: Android Auto restricts sideloaded APKs while driving unless installed with Google Play source origin (`com.android.vending`) via AAEnabler (`malebuffy/AAEnabler`), KingInstaller (`fcaronte/KingInstaller`), ADB (`adb install -i "com.android.vending"`), or official Google Play Closed Testing track with "Unknown sources" toggled in Android Auto Developer Settings.
 - **Instant Root Menu & Background Refresh**: `onLoadChildren("/")` returns available/local items instantly to prevent Android Auto's 5-second binder timeout, followed by background synchronization and `notifyChildrenChanged("/")`.
 - **Universal Automotive Connection**: `isValid()` allows all connecting media browser clients across wireless adapters, head units, and Android Automotive OS.
 - **Automotive Metadata**: Declares `automotive_app_desc.xml` and small car icon metadata in `AndroidManifest.xml`.
