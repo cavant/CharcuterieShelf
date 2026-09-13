@@ -56,86 +56,101 @@ class AbsAudioPlayer : Plugin() {
     }
 
     val foregroundServiceReady : () -> Unit = {
-      playerNotificationService = mainActivity.foregroundService
+      try {
+        if (mainActivity.isPlayerNotificationServiceInitialized()) {
+          playerNotificationService = mainActivity.foregroundService
 
-      playerNotificationService.clientEventEmitter = (object : PlayerNotificationService.ClientEventEmitter {
-        override fun onPlaybackSession(playbackSession: PlaybackSession) {
-          notifyListeners("onPlaybackSession", JSObject(jacksonMapper.writeValueAsString(playbackSession)))
-        }
+          playerNotificationService.clientEventEmitter = (object : PlayerNotificationService.ClientEventEmitter {
+          override fun onPlaybackSession(playbackSession: PlaybackSession) {
+            notifyListeners("onPlaybackSession", JSObject(jacksonMapper.writeValueAsString(playbackSession)))
+          }
 
-        override fun onPlaybackClosed() {
-          emit("onPlaybackClosed", true)
-        }
+          override fun onPlaybackClosed() {
+            emit("onPlaybackClosed", true)
+          }
 
-        override fun onPlayingUpdate(isPlaying: Boolean) {
-          emit("onPlayingUpdate", isPlaying)
-        }
+          override fun onPlayingUpdate(isPlaying: Boolean) {
+            emit("onPlayingUpdate", isPlaying)
+          }
 
-        override fun onMetadata(metadata: PlaybackMetadata) {
-          // Skip frequent metadata updates when app is backgrounded to prevent event queue buildup
-          if (!isInForeground) return
-          notifyListeners("onMetadata", JSObject(jacksonMapper.writeValueAsString(metadata)))
-        }
+          override fun onMetadata(metadata: PlaybackMetadata) {
+            // Skip frequent metadata updates when app is backgrounded to prevent event queue buildup
+            if (!isInForeground) return
+            notifyListeners("onMetadata", JSObject(jacksonMapper.writeValueAsString(metadata)))
+          }
 
-        override fun onSleepTimerEnded(currentPosition: Long) {
-          emit("onSleepTimerEnded", currentPosition)
-        }
+          override fun onSleepTimerEnded(currentPosition: Long) {
+            emit("onSleepTimerEnded", currentPosition)
+          }
 
-        override fun onSleepTimerSet(sleepTimeRemaining: Int, isAutoSleepTimer:Boolean) {
-          // Skip sleep timer updates when app is backgrounded to prevent event queue buildup
-          if (!isInForeground) return
-          val ret = JSObject()
-          ret.put("value", sleepTimeRemaining)
-          ret.put("isAuto", isAutoSleepTimer)
-          notifyListeners("onSleepTimerSet", ret)
-        }
+          override fun onSleepTimerSet(sleepTimeRemaining: Int, isAutoSleepTimer:Boolean) {
+            // Skip sleep timer updates when app is backgrounded to prevent event queue buildup
+            if (!isInForeground) return
+            val ret = JSObject()
+            ret.put("value", sleepTimeRemaining)
+            ret.put("isAuto", isAutoSleepTimer)
+            notifyListeners("onSleepTimerSet", ret)
+          }
 
-        override fun onLocalMediaProgressUpdate(localMediaProgress: LocalMediaProgress) {
-          // Skip progress updates when app is backgrounded to prevent event queue buildup
-          if (!isInForeground) return
-          notifyListeners("onLocalMediaProgressUpdate", JSObject(jacksonMapper.writeValueAsString(localMediaProgress)))
-        }
+          override fun onLocalMediaProgressUpdate(localMediaProgress: LocalMediaProgress) {
+            // Skip progress updates when app is backgrounded to prevent event queue buildup
+            if (!isInForeground) return
+            notifyListeners("onLocalMediaProgressUpdate", JSObject(jacksonMapper.writeValueAsString(localMediaProgress)))
+          }
 
-        override fun onPlaybackFailed(errorMessage: String) {
-          emit("onPlaybackFailed", errorMessage)
-        }
+          override fun onPlaybackFailed(errorMessage: String) {
+            emit("onPlaybackFailed", errorMessage)
+          }
 
-        override fun onMediaPlayerChanged(mediaPlayer:String) {
-          emit("onMediaPlayerChanged", mediaPlayer)
-        }
+          override fun onMediaPlayerChanged(mediaPlayer:String) {
+            emit("onMediaPlayerChanged", mediaPlayer)
+          }
 
-        override fun onProgressSyncFailing() {
-          emit("onProgressSyncFailing", "")
-        }
+          override fun onProgressSyncFailing() {
+            emit("onProgressSyncFailing", "")
+          }
 
-        override fun onProgressSyncSuccess() {
-          emit("onProgressSyncSuccess", "")
-        }
+          override fun onProgressSyncSuccess() {
+            emit("onProgressSyncSuccess", "")
+          }
 
-        override fun onNetworkMeteredChanged(isUnmetered:Boolean) {
-          emit("onNetworkMeteredChanged", isUnmetered)
-        }
+          override fun onNetworkMeteredChanged(isUnmetered:Boolean) {
+            emit("onNetworkMeteredChanged", isUnmetered)
+          }
 
-        override fun onMediaItemHistoryUpdated(mediaItemHistory:MediaItemHistory) {
-          notifyListeners("onMediaItemHistoryUpdated", JSObject(jacksonMapper.writeValueAsString(mediaItemHistory)))
-        }
+          override fun onMediaItemHistoryUpdated(mediaItemHistory:MediaItemHistory) {
+            notifyListeners("onMediaItemHistoryUpdated", JSObject(jacksonMapper.writeValueAsString(mediaItemHistory)))
+          }
 
-        override fun onPlaybackSpeedChanged(playbackSpeed:Float) {
-          emit("onPlaybackSpeedChanged", playbackSpeed)
-        }
+          override fun onPlaybackSpeedChanged(playbackSpeed:Float) {
+            emit("onPlaybackSpeedChanged", playbackSpeed)
+          }
 
-        override fun onLocalEpisodeDeleted(localLibraryItemId: String, localEpisodeId: String, serverEpisodeId: String) {
-          val ret = JSObject()
-          ret.put("localLibraryItemId", localLibraryItemId)
-          ret.put("localEpisodeId", localEpisodeId)
-          ret.put("serverEpisodeId", serverEpisodeId)
-          notifyListeners("onLocalEpisodeDeleted", ret)
-        }
-      })
+          override fun onLocalEpisodeDeleted(localLibraryItemId: String, localEpisodeId: String, serverEpisodeId: String) {
+            val ret = JSObject()
+            ret.put("localLibraryItemId", localLibraryItemId)
+            ret.put("localEpisodeId", localEpisodeId)
+            ret.put("serverEpisodeId", serverEpisodeId)
+            notifyListeners("onLocalEpisodeDeleted", ret)
+          }
+        })
 
-      MediaEventManager.clientEventEmitter = playerNotificationService.clientEventEmitter
+        MediaEventManager.clientEventEmitter = playerNotificationService.clientEventEmitter
+      }
+    } catch (t: Throwable) {
+      Log.e(tag, "Error in foregroundServiceReady", t)
     }
+  }
     mainActivity.pluginCallback = foregroundServiceReady
+
+    if (mainActivity.isPlayerNotificationServiceInitialized()) {
+      Log.d(tag, "Foreground service already initialized, executing foregroundServiceReady immediately")
+      try {
+        foregroundServiceReady()
+      } catch (t: Throwable) {
+        Log.e(tag, "Failed to run foregroundServiceReady immediately", t)
+      }
+    }
   }
 
   fun emit(evtName: String, value: Any) {

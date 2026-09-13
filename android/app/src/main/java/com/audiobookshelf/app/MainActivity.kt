@@ -37,7 +37,7 @@ class MainActivity : BridgeActivity() {
   lateinit var foregroundService : PlayerNotificationService
   private lateinit var mConnection : ServiceConnection
 
-  lateinit var pluginCallback : () -> Unit
+  var pluginCallback : (() -> Unit)? = null
 
   val storageHelper = SimpleStorageHelper(this)
   val storage = SimpleStorage(this)
@@ -60,75 +60,91 @@ class MainActivity : BridgeActivity() {
 
     // Update the margins to handle edge-to-edge enforced in SDK 35
     // See: https://developer.android.com/develop/ui/views/layout/edge-to-edge
-    val webView: WebView = findViewById(R.id.webview)
-    webView.setOnApplyWindowInsetsListener { v, insets ->
-      val (left, top, right, bottom) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        val sysInsets = insets.getInsets(WindowInsets.Type.systemBars())
-        Log.d(tag, "safe sysInsets: $sysInsets")
-        arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
-      } else {
-        arrayOf(
-          insets.systemWindowInsetLeft,
-          insets.systemWindowInsetTop,
-          insets.systemWindowInsetRight,
-          insets.systemWindowInsetBottom
-        )
-      }
-
-      // Inject as CSS variables
-      // NOTE: Possibly able to use in the future to support edge-to-edge better.
-       val js = """
-       document.documentElement.style.setProperty('--safe-area-inset-top', '${top}px');
-       document.documentElement.style.setProperty('--safe-area-inset-bottom', '${bottom}px');
-       document.documentElement.style.setProperty('--safe-area-inset-left', '${left}px');
-       document.documentElement.style.setProperty('--safe-area-inset-right', '${right}px');
-      """.trimIndent()
-      webView.evaluateJavascript(js, null)
-
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    try {
+      val webView: WebView? = bridge?.webView ?: findViewById(R.id.webview)
+      webView?.setOnApplyWindowInsetsListener { v, insets ->
         try {
-          val accent1 = ContextCompat.getColor(this, android.R.color.system_accent1_500)
-          val accent1Light = ContextCompat.getColor(this, android.R.color.system_accent1_200)
-          val neutral900 = ContextCompat.getColor(this, android.R.color.system_neutral1_900)
-          val neutral800 = ContextCompat.getColor(this, android.R.color.system_neutral1_800)
-          val neutral700 = ContextCompat.getColor(this, android.R.color.system_neutral1_700)
-          val neutral100 = ContextCompat.getColor(this, android.R.color.system_neutral1_100)
-          val neutral500 = ContextCompat.getColor(this, android.R.color.system_neutral2_500)
+          val (left, top, right, bottom) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val sysInsets = insets.getInsets(WindowInsets.Type.systemBars())
+            Log.d(tag, "safe sysInsets: $sysInsets")
+            arrayOf(sysInsets.left, sysInsets.top, sysInsets.right, sysInsets.bottom)
+          } else {
+            arrayOf(
+              insets.systemWindowInsetLeft,
+              insets.systemWindowInsetTop,
+              insets.systemWindowInsetRight,
+              insets.systemWindowInsetBottom
+            )
+          }
 
-          fun toRgb(c: Int) = "${(c shr 16) and 0xFF} ${(c shr 8) and 0xFF} ${c and 0xFF}"
-
-          val dynamicJs = """
-            document.documentElement.style.setProperty('--dynamic-accent', '${toRgb(accent1)}');
-            document.documentElement.style.setProperty('--dynamic-accent-light', '${toRgb(accent1Light)}');
-            document.documentElement.style.setProperty('--dynamic-bg', '${toRgb(neutral900)}');
-            document.documentElement.style.setProperty('--dynamic-primary', '${toRgb(neutral800)}');
-            document.documentElement.style.setProperty('--dynamic-secondary', '${toRgb(neutral700)}');
-            document.documentElement.style.setProperty('--dynamic-border', '${toRgb(neutral700)}');
-            document.documentElement.style.setProperty('--dynamic-fg', '${toRgb(neutral100)}');
-            document.documentElement.style.setProperty('--dynamic-fg-muted', '${toRgb(neutral500)}');
+          // Inject as CSS variables
+          // NOTE: Possibly able to use in the future to support edge-to-edge better.
+          val js = """
+            if (document && document.documentElement) {
+              document.documentElement.style.setProperty('--safe-area-inset-top', '${top}px');
+              document.documentElement.style.setProperty('--safe-area-inset-bottom', '${bottom}px');
+              document.documentElement.style.setProperty('--safe-area-inset-left', '${left}px');
+              document.documentElement.style.setProperty('--safe-area-inset-right', '${right}px');
+            }
           """.trimIndent()
-          webView.evaluateJavascript(dynamicJs, null)
-        } catch (e: Exception) {
-          Log.e(tag, "Failed to inject dynamic colors", e)
+          webView.evaluateJavascript(js, null)
+
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+              val accent1 = ContextCompat.getColor(this, android.R.color.system_accent1_500)
+              val accent1Light = ContextCompat.getColor(this, android.R.color.system_accent1_200)
+              val neutral900 = ContextCompat.getColor(this, android.R.color.system_neutral1_900)
+              val neutral800 = ContextCompat.getColor(this, android.R.color.system_neutral1_800)
+              val neutral700 = ContextCompat.getColor(this, android.R.color.system_neutral1_700)
+              val neutral100 = ContextCompat.getColor(this, android.R.color.system_neutral1_100)
+              val neutral500 = ContextCompat.getColor(this, android.R.color.system_neutral2_500)
+
+              fun toRgb(c: Int) = "${(c shr 16) and 0xFF} ${(c shr 8) and 0xFF} ${c and 0xFF}"
+
+              val dynamicJs = """
+                if (document && document.documentElement) {
+                  document.documentElement.style.setProperty('--dynamic-accent', '${toRgb(accent1)}');
+                  document.documentElement.style.setProperty('--dynamic-accent-light', '${toRgb(accent1Light)}');
+                  document.documentElement.style.setProperty('--dynamic-bg', '${toRgb(neutral900)}');
+                  document.documentElement.style.setProperty('--dynamic-primary', '${toRgb(neutral800)}');
+                  document.documentElement.style.setProperty('--dynamic-secondary', '${toRgb(neutral700)}');
+                  document.documentElement.style.setProperty('--dynamic-border', '${toRgb(neutral700)}');
+                  document.documentElement.style.setProperty('--dynamic-fg', '${toRgb(neutral100)}');
+                  document.documentElement.style.setProperty('--dynamic-fg-muted', '${toRgb(neutral500)}');
+                }
+              """.trimIndent()
+              webView.evaluateJavascript(dynamicJs, null)
+            } catch (e: Throwable) {
+              Log.e(tag, "Failed to inject dynamic colors", e)
+            }
+          }
+
+          // Set margins
+          v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            leftMargin = left
+            bottomMargin = bottom
+            rightMargin = right
+            topMargin = top
+          }
+        } catch (t: Throwable) {
+          Log.e(tag, "Error in onApplyWindowInsets", t)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+          WindowInsets.CONSUMED
+        } else {
+          insets
         }
       }
-
-      // Set margins
-      v.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-        leftMargin = left
-        bottomMargin = bottom
-        rightMargin = right
-        topMargin = top
-      }
-
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        WindowInsets.CONSUMED
-      } else {
-        insets
-      }
+    } catch (t: Throwable) {
+      Log.e(tag, "Error configuring webView insets listener", t)
     }
 
-    requestNeededPermissions()
+    try {
+      requestNeededPermissions()
+    } catch (t: Throwable) {
+      Log.e(tag, "Error in requestNeededPermissions", t)
+    }
   }
 
   private fun requestNeededPermissions() {
@@ -168,11 +184,15 @@ class MainActivity : BridgeActivity() {
         Log.d(tag, "Service Connected $name")
 
         mBounded = true
-        val mLocalBinder = service as PlayerNotificationService.LocalBinder
-        foregroundService = mLocalBinder.getService()
+        try {
+          val mLocalBinder = service as PlayerNotificationService.LocalBinder
+          foregroundService = mLocalBinder.getService()
 
-        // Let NativeAudio know foreground service is ready and setup event listener
-        pluginCallback()
+          // Let NativeAudio know foreground service is ready and setup event listener
+          pluginCallback?.invoke()
+        } catch (t: Throwable) {
+          Log.e(tag, "Error initializing foregroundService in onServiceConnected", t)
+        }
       }
     }
 
@@ -187,37 +207,61 @@ class MainActivity : BridgeActivity() {
   }
 
   fun stopMyService() {
-    if (mBounded) {
-      mConnection.let { unbindService(it) };
-      mBounded = false;
+    if (mBounded && ::mConnection.isInitialized) {
+      try {
+        unbindService(mConnection)
+      } catch (t: Throwable) {
+        Log.w(tag, "Failed to unbind service", t)
+      }
+      mBounded = false
     }
-    val stopIntent = Intent(this, PlayerNotificationService::class.java)
-    stopService(stopIntent)
+    try {
+      val stopIntent = Intent(this, PlayerNotificationService::class.java)
+      stopService(stopIntent)
+    } catch (t: Throwable) {
+      Log.w(tag, "Failed to stop service", t)
+    }
   }
 
   override fun onSaveInstanceState(outState: Bundle) {
-    storageHelper.onSaveInstanceState(outState)
+    try {
+      storageHelper.onSaveInstanceState(outState)
+    } catch (t: Throwable) {
+      Log.e(tag, "Error saving storageHelper state", t)
+    }
     super.onSaveInstanceState(outState)
     outState.clear()
   }
 
   override fun onRestoreInstanceState(savedInstanceState: Bundle) {
     super.onRestoreInstanceState(savedInstanceState)
-    storageHelper.onRestoreInstanceState(savedInstanceState)
+    try {
+      storageHelper.onRestoreInstanceState(savedInstanceState)
+    } catch (t: Throwable) {
+      Log.e(tag, "Error restoring storageHelper state", t)
+    }
   }
 
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     super.onActivityResult(requestCode, resultCode, data)
-    // Mandatory for Activity, but not for Fragment & ComponentActivity
-    storageHelper.storage.onActivityResult(requestCode, resultCode, data)
+    try {
+      // Mandatory for Activity, but not for Fragment & ComponentActivity
+      storageHelper.storage.onActivityResult(requestCode, resultCode, data)
+    } catch (t: Throwable) {
+      Log.e(tag, "Error handling onActivityResult in storageHelper", t)
+    }
   }
 
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     Log.d(tag, "onRequestPermissionResult $requestCode")
-    permissions.forEach { Log.d(tag, "PERMISSION $it") }
-    grantResults.forEach { Log.d(tag, "GRANTREUSLTS $it") }
-    // Mandatory for Activity, but not for Fragment & ComponentActivity
-    storageHelper.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    try {
+      permissions.forEach { Log.d(tag, "PERMISSION $it") }
+      grantResults.forEach { Log.d(tag, "GRANTREUSLTS $it") }
+      // Mandatory for Activity, but not for Fragment & ComponentActivity
+      storageHelper.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    } catch (t: Throwable) {
+      Log.e(tag, "Error handling onRequestPermissionsResult in storageHelper", t)
+    }
   }
 }

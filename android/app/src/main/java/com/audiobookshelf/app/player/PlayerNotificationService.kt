@@ -235,15 +235,19 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     DeviceManager.initializeWidgetUpdater(ctx)
 
     // To listen for network change from metered to unmetered
-    val networkRequest =
-            NetworkRequest.Builder()
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                    .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                    .build()
-    val connectivityManager =
-            getSystemService(ConnectivityManager::class.java) as ConnectivityManager
-    connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+    try {
+      val networkRequest =
+              NetworkRequest.Builder()
+                      .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                      .addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                      .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                      .build()
+      val connectivityManager =
+              getSystemService(ConnectivityManager::class.java) as ConnectivityManager
+      connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
+    } catch (t: Throwable) {
+      Log.e(tag, "Failed to register network callback in onCreate", t)
+    }
 
     // Initialize API
     apiHandler = ApiHandler(ctx)
@@ -347,14 +351,19 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
                 // Note: In Android Auto for local cover images, setting the icon uri to a local path does not work (cover is blank)
                 // so we create and set the bitmap here instead of AbMediaDescriptionAdapter
                 if (currentPlaybackSession!!.localLibraryItem?.coverContentUrl != null) {
-                  bitmap =
-                    if (Build.VERSION.SDK_INT < 28) {
-                      MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
-                    } else {
-                      val source: ImageDecoder.Source =
-                        ImageDecoder.createSource(ctx.contentResolver, coverUri)
-                      ImageDecoder.decodeBitmap(source)
-                    }
+                  try {
+                    bitmap =
+                      if (Build.VERSION.SDK_INT < 28) {
+                        MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
+                      } else {
+                        val source: ImageDecoder.Source =
+                          ImageDecoder.createSource(ctx.contentResolver, coverUri)
+                        ImageDecoder.decodeBitmap(source)
+                      }
+                  } catch (t: Throwable) {
+                    Log.e(tag, "Failed to decode cover bitmap in TimelineQueueNavigator", t)
+                    bitmap = null
+                  }
                 }
 
                 // Fix for local images crashing on Android 11 for specific devices

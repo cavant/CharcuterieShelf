@@ -264,21 +264,28 @@ export default {
           }
 
           const results = await Promise.all(requests)
-          const allShelves = results.flat()
+          const allShelves = results.flatMap((res) => {
+            if (Array.isArray(res)) return res
+            if (Array.isArray(res?.data)) return res.data
+            if (Array.isArray(res?.shelves)) return res.shelves
+            return []
+          })
 
           // Keep continue-listening at the top across both mediums
-          const continueListeningShelves = allShelves.filter(s => s.id === 'continue-listening' || s.id === 'continue-reading' || s.label?.toLowerCase()?.includes('continue'))
-          const otherShelves = allShelves.filter(s => !continueListeningShelves.includes(s))
+          const continueListeningShelves = allShelves.filter(s => s && (s.id === 'continue-listening' || s.id === 'continue-reading' || s.label?.toLowerCase()?.includes('continue')))
+          const otherShelves = allShelves.filter(s => s && !continueListeningShelves.includes(s))
           rawCategories = [...continueListeningShelves, ...otherShelves]
         } else if (this.currentSection === 'podcast') {
           const podcastLib = (this.currentLibraryMediaType === 'podcast' ? this.currentLibrary : null) || this.libraries.find(l => l.mediaType === 'podcast')
           if (podcastLib) {
-            rawCategories = await this.$nativeHttp.get(`/api/libraries/${podcastLib.id}/personalized?minified=1&include=rssfeed,numEpisodesIncomplete`, { connectTimeout: 10000 }).catch(e => [])
+            const res = await this.$nativeHttp.get(`/api/libraries/${podcastLib.id}/personalized?minified=1&include=rssfeed,numEpisodesIncomplete`, { connectTimeout: 10000 }).catch(e => [])
+            rawCategories = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.shelves) ? res.shelves : []))
           }
         } else {
           const bookLib = (this.currentLibraryMediaType === 'book' ? this.currentLibrary : null) || this.libraries.find(l => l.mediaType === 'book')
           if (bookLib) {
-            rawCategories = await this.$nativeHttp.get(`/api/libraries/${bookLib.id}/personalized?minified=1`, { connectTimeout: 10000 }).catch(e => [])
+            const res = await this.$nativeHttp.get(`/api/libraries/${bookLib.id}/personalized?minified=1`, { connectTimeout: 10000 }).catch(e => [])
+            rawCategories = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.shelves) ? res.shelves : []))
           }
         }
 
