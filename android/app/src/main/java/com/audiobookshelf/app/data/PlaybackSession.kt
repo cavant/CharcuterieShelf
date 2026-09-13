@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.support.v4.media.MediaMetadataCompat
+import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.core.net.toFile
 import com.audiobookshelf.app.BuildConfig
@@ -175,32 +176,42 @@ class PlaybackSession(
 
   @JsonIgnore
   fun getCoverUri(ctx: Context): Uri {
-    if (localLibraryItem?.coverContentUrl != null) {
-      var coverUri = Uri.parse(localLibraryItem?.coverContentUrl.toString())
-      if (coverUri.toString().startsWith("file:")) {
-        coverUri =
-                FileProvider.getUriForFile(
-                        ctx,
-                        "${BuildConfig.APPLICATION_ID}.fileprovider",
-                        coverUri.toFile()
-                )
+    try {
+      if (localLibraryItem?.coverContentUrl != null) {
+        val coverUrl = localLibraryItem?.coverContentUrl.toString()
+        if (coverUrl.startsWith("file:")) {
+          val file = Uri.parse(coverUrl).toFile()
+          if (file.exists()) {
+            return FileProvider.getUriForFile(
+                    ctx,
+                    "${BuildConfig.APPLICATION_ID}.fileprovider",
+                    file
+            )
+          }
+        } else if (coverUrl.isNotEmpty()) {
+          return Uri.parse(coverUrl)
+        }
+        return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
       }
 
-      return coverUri
-              ?: Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
-    }
+      if (coverPath == null) {
+        return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
+      }
+      if (coverPath?.startsWith("http:") == true || coverPath?.startsWith("https:") == true) {
+        return Uri.parse(coverPath)
+      }
 
-    if (coverPath == null)
-            return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
-    if (coverPath?.startsWith("http:") == true || coverPath?.startsWith("https:") == true) {
-      return Uri.parse(coverPath)
+      val serverAddr = activeServerAddress
+      if (!serverAddr.isNullOrEmpty()) {
+        if (checkIsServerVersionGte("2.17.0")) {
+          return Uri.parse("$serverAddr/api/items/$libraryItemId/cover")
+        }
+        return Uri.parse("$serverAddr/api/items/$libraryItemId/cover?token=${DeviceManager.token}")
+      }
+    } catch (t: Throwable) {
+      Log.w("PlaybackSession", "getCoverUri: Failed to resolve cover URI for $id: ${t.message}")
     }
-
-    // As of v2.17.0 token is not needed with cover image requests
-    if (checkIsServerVersionGte("2.17.0")) {
-      return Uri.parse("$activeServerAddress/api/items/$libraryItemId/cover")
-    }
-    return Uri.parse("$activeServerAddress/api/items/$libraryItemId/cover?token=${DeviceManager.token}")
+    return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
   }
 
   @JsonIgnore
@@ -231,38 +242,45 @@ class PlaybackSession(
    */
   @JsonIgnore
   fun getMediaMetadataCompat(ctx: Context): MediaMetadataCompat {
-    val coverUri = getCoverUri(ctx)
+    try {
+      val coverUri = getCoverUri(ctx)
+      val safeTitle = displayTitle ?: "CharcuterieShelf"
+      val safeAuthor = displayAuthor ?: ""
 
-    val metadataBuilder =
-            MediaMetadataCompat.Builder()
-                    .putString(MediaMetadataCompat.METADATA_KEY_TITLE, displayTitle)
-                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, displayTitle)
-                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, displayAuthor)
-                    .putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, displayAuthor)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, displayAuthor)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, displayAuthor)
-                    .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ARTIST, displayAuthor)
-                    .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION, displayAuthor)
-                    .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
-                    .putString(
-                            MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI,
-                            coverUri.toString()
-                    )
-    if (totalDurationMs > 0L) {
-      metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalDurationMs)
+      val metadataBuilder =
+              MediaMetadataCompat.Builder()
+                      .putString(MediaMetadataCompat.METADATA_KEY_TITLE, safeTitle)
+                      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE, safeTitle)
+                      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, safeAuthor)
+                      .putString(MediaMetadataCompat.METADATA_KEY_AUTHOR, safeAuthor)
+                      .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, safeAuthor)
+                      .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, safeAuthor)
+                      .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ARTIST, safeAuthor)
+                      .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION, safeAuthor)
+                      .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id ?: "")
+                      .putString(
+                              MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI,
+                              coverUri.toString()
+                      )
+      if (totalDurationMs > 0L) {
+        metadataBuilder.putLong(MediaMetadataCompat.METADATA_KEY_DURATION, totalDurationMs)
+      }
+
+      if (resolvedCoverBitmap != null) {
+        metadataBuilder
+          .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, resolvedCoverBitmap)
+          .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, resolvedCoverBitmap)
+      } else {
+        metadataBuilder
+          .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, coverUri.toString())
+          .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, coverUri.toString())
+      }
+
+      return metadataBuilder.build()
+    } catch (t: Throwable) {
+      Log.e("PlaybackSession", "Failed to build getMediaMetadataCompat: ${t.message}")
+      return MediaMetadataCompat.Builder().build()
     }
-
-    if (resolvedCoverBitmap != null) {
-      metadataBuilder
-        .putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, resolvedCoverBitmap)
-        .putBitmap(MediaMetadataCompat.METADATA_KEY_ART, resolvedCoverBitmap)
-    } else {
-      metadataBuilder
-        .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, coverUri.toString())
-        .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, coverUri.toString())
-    }
-
-    return metadataBuilder.build()
   }
 
   /**
@@ -281,24 +299,37 @@ class PlaybackSession(
 
     // Local covers get bitmap synchronously, no async fetch needed
     if (localLibraryItem?.coverContentUrl != null) {
-      resolvedCoverBitmap =
-              if (Build.VERSION.SDK_INT < 28) {
-                MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
-              } else {
-                val source: ImageDecoder.Source =
-                        ImageDecoder.createSource(ctx.contentResolver, coverUri)
-                ImageDecoder.decodeBitmap(source)
-              }
-      onArtResolved()
+      try {
+        resolvedCoverBitmap =
+                if (Build.VERSION.SDK_INT < 28) {
+                  @Suppress("DEPRECATION")
+                  MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
+                } else {
+                  val source: ImageDecoder.Source =
+                          ImageDecoder.createSource(ctx.contentResolver, coverUri)
+                  ImageDecoder.decodeBitmap(source)
+                }
+      } catch (t: Throwable) {
+        Log.w("PlaybackSession", "Failed to decode local cover bitmap: ${t.message}")
+      }
+      try {
+        onArtResolved()
+      } catch (t: Throwable) {
+        Log.w("PlaybackSession", "Error in onArtResolved: ${t.message}")
+      }
       return null
     }
 
     // Server-side cover: resolve the art bitmap async
     return coroutineScope.launch {
-      val bitmap = resolveUriAsBitmap(ctx, coverUri)
-      bitmap?.let {
-        resolvedCoverBitmap = it
-        onArtResolved()
+      try {
+        val bitmap = resolveUriAsBitmap(ctx, coverUri)
+        bitmap?.let {
+          resolvedCoverBitmap = it
+          onArtResolved()
+        }
+      } catch (t: Throwable) {
+        Log.w("PlaybackSession", "Failed to resolve server cover bitmap: ${t.message}")
       }
     }
   }

@@ -245,8 +245,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
             getSystemService(ConnectivityManager::class.java) as ConnectivityManager
     connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
 
-    DbManager.initialize(ctx)
-
     // Initialize API
     apiHandler = ApiHandler(ctx)
 
@@ -316,9 +314,13 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     // player's own state on media item transitions/timeline changes, dropping the cover art
     // bitmap that PlaybackSession.resolveCoverBitmapAsync resolves separately.
     mediaSessionConnector.setMediaMetadataProvider { _ ->
-      currentPlaybackSession?.getMediaMetadataCompat(ctx)
-        ?: DeviceManager.deviceData.lastPlaybackSession?.getMediaMetadataCompat(ctx)
-        ?: MediaMetadataCompat.Builder().build()
+      try {
+        currentPlaybackSession?.getMediaMetadataCompat(ctx)
+          ?: DeviceManager.deviceData.lastPlaybackSession?.getMediaMetadataCompat(ctx)
+          ?: MediaMetadataCompat.Builder().build()
+      } catch (t: Throwable) {
+        MediaMetadataCompat.Builder().build()
+      }
     }
     val queueNavigator: TimelineQueueNavigator =
             object : TimelineQueueNavigator(mediaSession) {
@@ -393,8 +395,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
     initializeMPlayer()
     currentPlayer = mPlayer
-
-    restoreLastPlaybackSessionIfNeeded()
   }
 
   fun restoreLastPlaybackSessionIfNeeded() {
@@ -425,12 +425,16 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
       // Resolve cover bitmap asynchronously if not yet resolved
       lastSession.resolveCoverBitmapAsync(ctx, metadataScope) {
-        if (currentPlaybackSession == null) {
-          mediaSession.setMetadata(lastSession.getMediaMetadataCompat(ctx))
+        try {
+          if (currentPlaybackSession == null) {
+            mediaSession.setMetadata(lastSession.getMediaMetadataCompat(ctx))
+          }
+        } catch (t: Throwable) {
+          AbsLogger.error(tag, "restoreLastPlaybackSessionIfNeeded art resolved callback error: ${t.message}")
         }
       }
-    } catch (e: Exception) {
-      AbsLogger.error(tag, "restoreLastPlaybackSessionIfNeeded: Failed: ${e.message}")
+    } catch (t: Throwable) {
+      AbsLogger.error(tag, "restoreLastPlaybackSessionIfNeeded: Failed: ${t.message}")
     }
   }
 
@@ -1109,15 +1113,19 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       return
     }
     if (currentPlaybackSession == null && DeviceManager.deviceData.lastPlaybackSession != null) {
-      val lastSession = DeviceManager.deviceData.lastPlaybackSession!!
-      AbsLogger.info(tag, "play: Resuming last playback session: ${lastSession.displayTitle}")
-      val connectionConfig = DeviceManager.deviceData.serverConnectionConfigs.find { it.id == lastSession.serverConnectionConfigId }
-      connectionConfig?.let {
-        DeviceManager.serverConnectionConfig = it
+      try {
+        val lastSession = DeviceManager.deviceData.lastPlaybackSession!!
+        AbsLogger.info(tag, "play: Resuming last playback session: ${lastSession.displayTitle}")
+        val connectionConfig = DeviceManager.deviceData.serverConnectionConfigs.find { it.id == lastSession.serverConnectionConfigId }
+        connectionConfig?.let {
+          DeviceManager.serverConnectionConfig = it
+        }
+        val playbackRate = mediaManager.getSavedPlaybackRate()
+        preparePlayer(lastSession, true, playbackRate)
+        return
+      } catch (t: Throwable) {
+        AbsLogger.error(tag, "play: Failed to resume last playback session: ${t.message}")
       }
-      val playbackRate = mediaManager.getSavedPlaybackRate()
-      preparePlayer(lastSession, true, playbackRate)
-      return
     }
     currentPlayer.volume = 1F
     currentPlayer.play()

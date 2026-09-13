@@ -1,4 +1,4 @@
-﻿import { AbsAudioPlayer, AbsDownloader } from '@/plugins/capacitor'
+import { AbsAudioPlayer, AbsDownloader } from '@/plugins/capacitor'
 
 class PodcastSubscriptionManager {
   constructor(app, store) {
@@ -172,6 +172,7 @@ class PodcastSubscriptionManager {
 }
 
 export default ({ app, store }, inject) => {
+  if (!process.client) return
   const manager = new PodcastSubscriptionManager(app, store)
   manager.init()
   inject('podcastSubscriptionManager', manager)

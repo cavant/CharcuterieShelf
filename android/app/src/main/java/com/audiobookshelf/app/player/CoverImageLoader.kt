@@ -23,14 +23,18 @@ suspend fun resolveUriAsBitmap(context: Context, uri: Uri): Bitmap? {
         .error(R.drawable.icon)
         .submit()
         .get()
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
       Log.e(TAG, "Failed to load cover bitmap for uri: $uri", e)
 
-      Glide.with(context)
-        .asBitmap()
-        .load(Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon))
-        .submit()
-        .get()
+      try {
+        Glide.with(context)
+          .asBitmap()
+          .load(Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon))
+          .submit()
+          .get()
+      } catch (e2: Throwable) {
+        null
+      }
     }
   }
 }

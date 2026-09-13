@@ -617,3 +617,49 @@ All GitHub Actions pipelines achieved 100% green status on commit `727a6b2`:
 - **Native Android Compilation (`assembleRelease bundleRelease`)**: Signed release APK (`app-release.apk`, 16.2 MB) and Google Play bundle (`app-release.aab`, 15.6 MB) compiled with JDK 21 in 54s.
 - **Cloud Distribution Sync**: Successfully copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
 - **GitHub Release Live**: Published and replaced asset on [**v0.14.14-beta**](https://github.com/cavant/CharcuterieShelf/releases/tag/v0.14.14-beta).
+
+---
+
+## 15. Launch Crash Defense, Application Lifecycle & Stability Overhaul (v0.14.15-beta)
+
+### Problems Identified
+1. **Immediate Crash on Launch**: After upgrading to v0.14.14-beta, the app immediately crashed upon opening.
+2. **`PlayerNotificationService.onCreate()` MediaSession Collision**: Calling `restoreLastPlaybackSessionIfNeeded()` inside service `onCreate()` published an active media session with `PlaybackStateCompat.STATE_PAUSED` and duration to Android's `MediaSessionManager` while ExoPlayer's playlist was still empty and idle. On Android 12–15, SystemUI immediately queried the session and dispatches media callbacks, causing unhandled exceptions inside `MediaSessionConnector`.
+3. **Paper DB Initialization Order Hazard**: `DeviceManager` was being accessed before Paper DB initialization was guaranteed to complete when started outside the standard Activity lifecycle.
+4. **Uncaught Exceptions in `PlaybackSession.kt`**:
+   - `getCoverUri()` called `FileProvider.getUriForFile` on local covers without try-catches, throwing unhandled `IllegalArgumentException` on invalid/unmapped file URIs.
+   - `resolveCoverBitmapAsync` decoded local bitmaps synchronously using `ImageDecoder.decodeBitmap(source)` on the Main thread without try-catches.
+   - `getMediaMetadataCompat()` had no defensive catch block when invoked by `MediaSessionConnector.setMediaMetadataProvider`.
+   - `CoverImageLoader.kt:resolveUriAsBitmap()` could throw `ExecutionException` if both the network URI and fallback resource URI failed.
+5. **Nuxt SSR Plugin Execution**: `plugins/podcastSubscriptionManager.js` lacked `if (!process.client) return`, risking execution before client plugins loaded.
+
+### Key Architectural Implementations
+1. **Dedicated `CharcuterieShelfApplication`**:
+   - Created `android/app/src/main/java/com/audiobookshelf/app/CharcuterieShelfApplication.kt` extending `android.app.Application`.
+   - Initialized `DbManager.initialize(applicationContext)` in `Application.onCreate()` to ensure Paper DB is permanently and reliably initialized before any Activity, Service, Receiver, or Provider starts.
+   - Registered `android:name=".CharcuterieShelfApplication"` in `AndroidManifest.xml`.
+2. **Safe MediaSession Restoration Flow**:
+   - Removed `restoreLastPlaybackSessionIfNeeded()` from `PlayerNotificationService.kt:onCreate()`. On phone launch, media playback is initiated on-demand by user action.
+   - Preserved `restoreLastPlaybackSessionIfNeeded()` exclusively in `onGetRoot()`, which is the intended trigger for Android Auto taskbar widget population upon automotive head unit connection.
+   - Wrapped `restoreLastPlaybackSessionIfNeeded()` and its async artwork callback in defensive `try { ... } catch (t: Throwable)`.
+3. **ExoPlayer Metadata Provider Resilience**:
+   - Wrapped `mediaSessionConnector.setMediaMetadataProvider` in `try { ... } catch (t: Throwable)` fallback to `MediaMetadataCompat.Builder().build()`.
+4. **Defensive Cover & Metadata Resolution**:
+   - In `PlaybackSession.kt`:
+     - Wrapped `getCoverUri()` in comprehensive try-catch with file existence check before calling `FileProvider.getUriForFile()`.
+     - Wrapped `getMediaMetadataCompat()` in try-catch with safe fallbacks for title and author.
+     - Wrapped `resolveCoverBitmapAsync` in try-catch blocks for both local `ImageDecoder` decodes and server-side coroutines.
+   - In `CoverImageLoader.kt`: Catch `Throwable` and return `null` if all Glide decodes fail.
+5. **Nuxt Client Plugin Safeguard**:
+   - Added `if (!process.client) return` at the entrypoint of `plugins/podcastSubscriptionManager.js`.
+6. **Version Bump (`v0.14.15-beta`, versionCode 135)**:
+   - Incremented `versionCode` to 135 and `versionName` to `0.14.15-beta` in `package.json` and `android/app/build.gradle`.
+
+### Verification Results
+- **Automated QA Harness (`npm run test:qa`)**: All 12 test suites passed 100%.
+- **Nuxt Static Generation (`npm run generate`)**: Succeeded cleanly in 35s.
+- **Capacitor Sync (`npx cap sync`)**: Synchronized web bundle into Android native assets.
+- **Native Android Compilation (`assembleRelease bundleRelease`)**: Clean release build in 1m 11s.
+- **Cloud Distribution Sync**: Successfully copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
+- **GitHub Release Live**: Published `v0.14.15-beta` with release APK.
+
