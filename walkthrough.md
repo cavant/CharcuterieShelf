@@ -605,11 +605,15 @@ All GitHub Actions pipelines achieved 100% green status on commit `727a6b2`:
    - **Background Scanner (`plugins/podcastSubscriptionManager.js`)**: Periodically monitors subscribed podcasts. Seeds known episodes on first run (`known_episodes_${serverAddress}_${podcastId}`) to prevent historic episode spam, and triggers device-only downloads (`AbsDownloader.downloadLibraryItem`), notifications, and queue additions (`globals/addToQueue`) for new releases.
    - **Playback Queue (`store/globals.js`)**: Added `playbackQueue`, `addToQueue`, `removeFromQueue`, and `clearQueue`.
    - **Configurable Controls**: Added global automation toggles in **Settings → Podcasts & Downloads** (`pages/settings.vue`) and granular per-podcast overrides in `PodcastSettingsModal.vue`.
+6. **In-App Updater Dynamic Native Version Sync**:
+   - Fixed issue where the app updater continuously reported an update available even after updating: Nuxt statically bakes `publicRuntimeConfig: { version: pkg.version }` during `npm run generate`.
+   - Updated [`plugins/appUpdater.js`](file:///c:/audiobookshelf_app/plugins/appUpdater.js) to dynamically query native `App.getInfo()` from `@capacitor/app` on launch and before checking releases, directly reading Android's `BuildConfig.VERSION_NAME`.
+   - Updated [`pages/settings.vue`](file:///c:/audiobookshelf_app/pages/settings.vue) and [`components/app/SideDrawer.vue`](file:///c:/audiobookshelf_app/components/app/SideDrawer.vue) with `currentAppVersion` computed properties.
+   - Re-compiled Nuxt static bundle (`dist/`) and rebuilt release binaries.
 
 ### Verification Results
 - **Automated QA Harness (`npm run test:qa`)**: All 12 test suites passed 100% (including `home-section-podcast-automation.test.mjs`).
-- **Nuxt Static Generation (`npm run generate`)**: Built 15 static routes in `dist/` with 0 errors.
-- **Native Android Compilation (`assembleRelease bundleRelease`)**: Signed release APK (`app-release.apk`, 16.2 MB) and Google Play bundle (`app-release.aab`, 15.6 MB) compiled with JDK 21 in 1m 15s.
+- **Nuxt Static Generation (`npm run generate`)**: Built 15 static routes in `dist/` with 0 errors (all static HTML stamped with `0.14.14-beta`).
+- **Native Android Compilation (`assembleRelease bundleRelease`)**: Signed release APK (`app-release.apk`, 16.2 MB) and Google Play bundle (`app-release.aab`, 15.6 MB) compiled with JDK 21 in 54s.
 - **Cloud Distribution Sync**: Successfully copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
-
-
+- **GitHub Release Live**: Published and replaced asset on [**v0.14.14-beta**](https://github.com/cavant/CharcuterieShelf/releases/tag/v0.14.14-beta).
