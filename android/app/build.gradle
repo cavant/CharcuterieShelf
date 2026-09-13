@@ -36,8 +36,8 @@ android {
     applicationId "com.CharcuterieShelf"
     minSdkVersion rootProject.ext.minSdkVersion
     targetSdkVersion rootProject.ext.targetSdkVersion
-    versionCode 133
-    versionName "0.14.13-beta"
+    versionCode 134
+    versionName "0.14.14-beta"
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders = [
       "appAuthRedirectScheme": "com.CharcuterieShelf"

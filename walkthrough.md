@@ -569,3 +569,47 @@ All GitHub Actions pipelines achieved 100% green status on commit `727a6b2`:
 - **Cloud Distribution Sync**: Copied `CharcuterieShelf.apk` and `CharcuterieShelf.aab` to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
 - **GitHub Release Live**: Published release `v0.14.13-beta` with `CharcuterieShelf.apk` attached and marked as latest release.
 
+---
+
+## 30. Android Auto Resiliency, Taskbar Mini-Player, 3-Way Home Switcher & Pocket Casts Automation (v0.14.14-beta)
+
+### Problem Solved
+1. **Android Auto Crash on Library & Downloads Load**: After AAEnabler permitted opening CharcuterieShelf in-car, browsing downloads or connected libraries caused crashes. Root causes:
+   - `FileProvider` lacked `<external-path name="external" path="." />` in `res/xml/file_paths.xml`, throwing `IllegalArgumentException: Failed to find configured root` when resolving cover artwork and audio files on external/scoped storage.
+   - `MediaManager.kt:loadPodcastEpisodeMediaBrowserItems` had unhandled null wrappers when library items were missing, failing to invoke the callback `cb(mutableListOf())` and causing Android Auto's binder connection to time out after 5 seconds.
+   - `LocalLibraryItem.kt:getCoverBitmap()` lacked defensive try-catches during `ImageDecoder.decodeBitmap()`.
+2. **Android Auto Taskbar Widget Missing Last Played Item**: Android Auto's taskbar media widget relies on active `PlaybackStateCompat` and `MediaMetadataCompat`. If the user connected to the car with no active session, the widget remained empty.
+3. **Android Auto Now Playing Back/Home Navigation**: Android Auto lacked a consolidated Home node accessible from Now Playing's back/up button that presented both audiobooks and podcasts together.
+4. **Phone App Launch Defaulting to Podcasts**: On startup, the phone app briefly loaded Home but automatically switched to the podcasts library. Furthermore, the top switcher only allowed toggling between Audiobooks and Podcasts without an explicit Home option.
+5. **Pocket Casts Subscription Automation Gap**: Subscribed podcasts lacked auto-downloading of new episodes to device storage, system push notifications for new releases, and automatic addition to the playback queue (Up Next).
+
+### Key Architectural Implementations
+1. **Android Auto FileProvider & Media Browser Crash Immunity**:
+   - Added `<external-path name="external" path="." />` to `android/app/src/main/res/xml/file_paths.xml`.
+   - Wrapped `getCoverBitmap()` in `LocalLibraryItem.kt` with try-catch fallback to null.
+   - Added defensive null-guards and safe casting (`as? Podcast`, `as? LibraryShelfBookEntity`) in `MediaManager.kt` and `PlayerNotificationService.kt`, guaranteeing the media browser callback is always invoked to prevent binder timeouts.
+2. **Taskbar Media Widget & Last Played Session Restoration**:
+   - Implemented `restoreLastPlaybackSessionIfNeeded()` in `PlayerNotificationService.kt`.
+   - Restores the last played track metadata, duration, artwork, and playback position into `mediaSession` with `PlaybackStateCompat.STATE_PAUSED` and transport controls upon `onCreate()` and `onGetRoot()`.
+   - Android Auto immediately renders the item in the in-car taskbar media widget, and tapping Play instantly resumes playback.
+3. **Android Auto Combined Home Root (`HOME_ROOT = "__HOME__"`)**:
+   - Added `HOME_ROOT` to `BrowseTree.kt`.
+   - In `PlayerNotificationService.kt:onLoadChildren`, `HOME_ROOT` aggregates Continue Listening, Recently Added, and Downloads across both media formats into a unified top-level menu.
+4. **3-Way Top-Level Segment Switcher (`MediaSectionSwitcher.vue`)**:
+   - Upgraded to 3 segments: **Home** (`home`), **Audiobooks** (`book`), and **Podcasts** (`podcast`).
+   - Added `libraries/currentSection` state and mutations in `store/libraries.js`.
+   - When on `home`, `pages/bookshelf/index.vue` concurrently queries both audiobook and podcast shelves (`fetchCategories`), rendering a unified dashboard with Continue Listening, Recently Added, and Downloads.
+   - Persists user selection in `$localStore` (`defaultHomeSection`), ensuring the user's preferred view is restored across app launches.
+5. **Pocket Casts Automation & New Episode Management**:
+   - **Native Notification Bridge (`AbsAudioPlayer.kt` & `AbsAudioPlayer.js`)**: Added `@PluginMethod fun postEpisodeNotification` creating Android notification channel `charcuterieshelf_episodes` with high importance and `R.drawable.icon_monochrome`.
+   - **Background Scanner (`plugins/podcastSubscriptionManager.js`)**: Periodically monitors subscribed podcasts. Seeds known episodes on first run (`known_episodes_${serverAddress}_${podcastId}`) to prevent historic episode spam, and triggers device-only downloads (`AbsDownloader.downloadLibraryItem`), notifications, and queue additions (`globals/addToQueue`) for new releases.
+   - **Playback Queue (`store/globals.js`)**: Added `playbackQueue`, `addToQueue`, `removeFromQueue`, and `clearQueue`.
+   - **Configurable Controls**: Added global automation toggles in **Settings → Podcasts & Downloads** (`pages/settings.vue`) and granular per-podcast overrides in `PodcastSettingsModal.vue`.
+
+### Verification Results
+- **Automated QA Harness (`npm run test:qa`)**: All 12 test suites passed 100% (including `home-section-podcast-automation.test.mjs`).
+- **Nuxt Static Generation (`npm run generate`)**: Built 15 static routes in `dist/` with 0 errors.
+- **Native Android Compilation (`assembleRelease bundleRelease`)**: Signed release APK (`app-release.apk`, 16.2 MB) and Google Play bundle (`app-release.aab`, 15.6 MB) compiled with JDK 21 in 1m 15s.
+- **Cloud Distribution Sync**: Successfully copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
+
+

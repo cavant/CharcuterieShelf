@@ -5,7 +5,7 @@
 ### *A gourmet client for self-hosted audiobooks and podcasts with Material You theming, Pocket Casts playback controls, and smart local/remote switching.*
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Support-Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/themagicsalami)
-[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.9--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
+[![Download Release APK](https://img.shields.io/badge/Download_APK-v0.14.14--beta-success?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf/releases/latest/download/CharcuterieShelf.apk)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/cavant/CharcuterieShelf)
 [![Author: TheMagicSalami](https://img.shields.io/badge/Author-TheMagicSalami-red?style=for-the-badge)](https://github.com/cavant)
@@ -37,7 +37,7 @@ Google Play requires personal developer accounts to run a closed test with at le
 
 Welcome to **CharcuterieShelf**! A community-first, feature-packed client for [Audiobookshelf](https://github.com/advplyr/audiobookshelf-app) crafted by **TheMagicSalami** ([cavant](https://github.com/cavant)).
 
-While the official Audiobookshelf app is phenomenal, CharcuterieShelf was created to bridge critical gaps for power listeners: seamlessly moving between high-speed home Wi-Fi and mobile data with a single server profile, integrating top playback features inspired by **Pocket Casts** (including a 3-column reorderable favorites grid and zero-server storage downloads), supporting rich **Material You dynamic Monet wallpaper theming & custom accent palettes**, providing a resilient **Download Manager with error recovery**, a polished **home screen player widget**, and achieving complete **in-app editing parity with the web client**.
+While the official Audiobookshelf app is phenomenal, CharcuterieShelf was created to bridge critical gaps for power listeners: seamlessly moving between high-speed home Wi-Fi and mobile data with a single server profile, integrating top playback features inspired by **Pocket Casts** (including a 3-column reorderable favorites grid, auto-downloads, notifications, and zero-server storage downloads), supporting rich **Material You dynamic Monet wallpaper theming & custom accent palettes**, providing a resilient **Download Manager with error recovery**, a polished **home screen player widget**, and achieving complete **in-app editing parity with the web client**.
 
 ---
 
@@ -94,9 +94,9 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 
 ---
 
-### 🔀 Dedicated Audiobooks & Podcasts Section Switcher
-- **Two-Cell Top-Level Switcher**: Positioned right beneath the top appbar, toggle effortlessly between your Audiobook libraries and Podcast subscriptions.
-- **Dedicated Medium Interfaces**: Keeps your books and podcasts completely separate with dedicated navigation bars, toolbars, and layouts tailored to each medium.
+### 🔀 3-Way Top-Level Segment Switcher: Home | Audiobooks | Podcasts
+- **Three-Cell Top-Level Switcher**: Positioned right beneath the top appbar, toggle effortlessly between **Home**, **Audiobooks**, and **Podcasts**.
+- **Unified Home Dashboard**: Aggregates Continue Listening, Recently Added, Recommendations, and Downloads across both your audiobooks and podcasts into a unified view. Remembers your preferred startup section across app relaunches!
 - **Smart Server Integration**: Automatically detects audiobook and podcast libraries on your server. If your server doesn't have a podcast library configured yet, an intuitive inline modal lets you create one with custom folder mapping in seconds!
 
 ---
@@ -124,6 +124,7 @@ While the official Audiobookshelf app is phenomenal, CharcuterieShelf was create
 ### 🎙️ Pocket Casts-Inspired Podcatcher Power
 - **Per-User Podcast Siloing**: Each user maintains their own private podcast subscription list per server. When you log in, only your subscribed shows appear on your bookshelf and feeds—keeping podcast libraries fully personalized across different users sharing a single server.
 - **Device-Only Downloads & Direct Streaming**: Audio files download strictly to your phone or stream directly from podcast feed enclosures. The server's hard drive is never filled with media files, while playback progress and finished states sync to the server.
+- **New Episode Automation**: Auto-download new episodes straight to your device, receive Android push notifications for new releases, and automatically queue episodes to Up Next (next or last). Includes global settings and per-podcast overrides.
 - **1-Tap Pocket Casts Subscribe Toggle**: Subscribe or unsubscribe directly from any podcast detail screen with a single tap, matching Pocket Casts' iconic badge styling.
 - **Full RSS Feed Inline Browsing**: Automatically loads the entire podcast RSS catalog inline without opening separate modals. Tap any episode row to instantly view show notes and full description.
 - **Downloaded-First Smart Floating Sort**: Downloaded episodes automatically float to the top of the episode list with a visual section divider, followed by all remaining episodes.

@@ -190,6 +190,27 @@
       <p class="pl-4">Auto-Delete Played Podcasts</p>
       <span class="material-symbols text-xl ml-2 cursor-pointer" @click.stop="showInfo('autoDeletePlayedPodcasts')">info</span>
     </div>
+    <div class="flex items-center py-3">
+      <div class="w-10 flex justify-center" @click="toggleAutoDownloadNewPodcasts">
+        <ui-toggle-switch v-model="settings.autoDownloadNewPodcasts" @input="saveSettings" />
+      </div>
+      <p class="pl-4">Auto-Download New Episodes</p>
+      <span class="material-symbols text-xl ml-2 cursor-pointer" @click.stop="showInfo('autoDownloadNewPodcasts')">info</span>
+    </div>
+    <div class="flex items-center py-3">
+      <div class="w-10 flex justify-center" @click="toggleNotifyNewEpisodes">
+        <ui-toggle-switch v-model="settings.notifyNewEpisodes" @input="saveSettings" />
+      </div>
+      <p class="pl-4">New Episode Notifications</p>
+      <span class="material-symbols text-xl ml-2 cursor-pointer" @click.stop="showInfo('notifyNewEpisodes')">info</span>
+    </div>
+    <div class="flex items-center py-3">
+      <div class="w-10 flex justify-center" @click="toggleAutoAddToQueue">
+        <ui-toggle-switch v-model="settings.autoAddToQueue" @input="saveSettings" />
+      </div>
+      <p class="pl-4">Auto-Add New Episodes to Queue</p>
+      <span class="material-symbols text-xl ml-2 cursor-pointer" @click.stop="showInfo('autoAddToQueue')">info</span>
+    </div>
 
     <!-- Android Auto settings -->
     <template v-if="!isiOS">
@@ -410,7 +431,10 @@ export default {
         streamingUsingCellular: 'ALWAYS',
         androidAutoBrowseLimitForGrouping: 100,
         androidAutoBrowseSeriesSequenceOrder: 'ASC',
-        autoDeletePlayedPodcasts: true
+        autoDeletePlayedPodcasts: true,
+        autoDownloadNewPodcasts: false,
+        notifyNewEpisodes: true,
+        autoAddToQueue: false
       },
       theme: 'dark',
       customAccent: '',
@@ -430,6 +454,18 @@ export default {
         autoDeletePlayedPodcasts: {
           name: 'Auto-Delete Played Podcasts',
           message: 'Automatically delete downloaded podcast audio files from your device when playback reaches the end.'
+        },
+        autoDownloadNewPodcasts: {
+          name: 'Auto-Download New Episodes',
+          message: 'Automatically download newly published episodes for subscribed podcasts directly to this device.'
+        },
+        notifyNewEpisodes: {
+          name: 'New Episode Notifications',
+          message: 'Display system push notifications when new episodes are released for your subscribed podcasts.'
+        },
+        autoAddToQueue: {
+          name: 'Auto-Add to Queue',
+          message: 'Automatically append new episodes from subscribed podcasts into your playback queue.'
         },
         disableShakeToResetSleepTimer: {
           name: this.$strings.LabelDisableShakeToReset,
@@ -924,6 +960,18 @@ export default {
       this.settings.autoDeletePlayedPodcasts = !this.settings.autoDeletePlayedPodcasts
       this.saveSettings()
     },
+    toggleAutoDownloadNewPodcasts() {
+      this.settings.autoDownloadNewPodcasts = !this.settings.autoDownloadNewPodcasts
+      this.saveSettings()
+    },
+    toggleNotifyNewEpisodes() {
+      this.settings.notifyNewEpisodes = !this.settings.notifyNewEpisodes
+      this.saveSettings()
+    },
+    toggleAutoAddToQueue() {
+      this.settings.autoAddToQueue = !this.settings.autoAddToQueue
+      this.saveSettings()
+    },
     getCurrentOrientation() {
       const orientation = window.screen?.orientation || {}
       const type = orientation.type || ''
@@ -943,6 +991,12 @@ export default {
     },
     async saveSettings() {
       await this.$hapticsImpact()
+      await this.$localStore.setGlobalPodcastAutomationSettings({
+        autoDownloadNew: !!this.settings.autoDownloadNewPodcasts,
+        notifyNewEpisodes: this.settings.notifyNewEpisodes !== undefined ? !!this.settings.notifyNewEpisodes : true,
+        autoAddToQueue: !!this.settings.autoAddToQueue,
+        queuePosition: 'last'
+      })
       const updatedDeviceData = await this.$db.updateDeviceSettings({ ...this.settings })
       if (updatedDeviceData) {
         this.$store.commit('setDeviceData', updatedDeviceData)
@@ -957,6 +1011,14 @@ export default {
       this.settings.enableAltView = !!deviceSettings.enableAltView
       this.settings.allowSeekingOnMediaControls = !!deviceSettings.allowSeekingOnMediaControls
       this.settings.autoDeletePlayedPodcasts = deviceSettings.autoDeletePlayedPodcasts !== undefined ? !!deviceSettings.autoDeletePlayedPodcasts : true
+
+      this.$localStore.getGlobalPodcastAutomationSettings().then((autoSettings) => {
+        if (autoSettings) {
+          this.settings.autoDownloadNewPodcasts = !!autoSettings.autoDownloadNew
+          this.settings.notifyNewEpisodes = autoSettings.notifyNewEpisodes !== undefined ? !!autoSettings.notifyNewEpisodes : true
+          this.settings.autoAddToQueue = !!autoSettings.autoAddToQueue
+        }
+      })
       this.settings.jumpForwardTime = deviceSettings.jumpForwardTime || 10
       this.settings.jumpBackwardsTime = deviceSettings.jumpBackwardsTime || 10
       this.settings.enableMp3IndexSeeking = !!deviceSettings.enableMp3IndexSeeking

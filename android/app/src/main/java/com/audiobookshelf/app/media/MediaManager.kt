@@ -652,7 +652,12 @@ class MediaManager(private var apiHandler: ApiHandler, var ctx: Context) {
       loadLibraryItem(libraryItemId) { libraryItemWrapper ->
         Log.d(tag, "Loaded Podcast library item $libraryItemWrapper")
 
-        libraryItemWrapper?.let {
+        if (libraryItemWrapper == null) {
+          cb(mutableListOf())
+          return@loadLibraryItem
+        }
+
+        try {
           if (libraryItemWrapper is LocalLibraryItem) { // Local podcast episodes
             if (libraryItemWrapper.mediaType != "podcast" || libraryItemWrapper.media.getAudioTracks().isEmpty()) {
               cb(mutableListOf())
@@ -661,15 +666,18 @@ class MediaManager(private var apiHandler: ApiHandler, var ctx: Context) {
               selectedLibraryItemId = libraryItemWrapper.id
               selectedPodcast = podcast
 
-              val children = podcast.episodes?.map { podcastEpisode ->
-                Log.d(tag, "Local Podcast Episode ${podcastEpisode.title} | ${podcastEpisode.id}")
-
-                val progress = DeviceManager.dbManager.getLocalMediaProgress("${libraryItemWrapper.id}-${podcastEpisode.id}")
-                val description = podcastEpisode.getMediaDescription(libraryItemWrapper, progress, ctx)
-
-                MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE)
+              val children = podcast.episodes?.mapNotNull { podcastEpisode ->
+                try {
+                  Log.d(tag, "Local Podcast Episode ${podcastEpisode.title} | ${podcastEpisode.id}")
+                  val progress = DeviceManager.dbManager.getLocalMediaProgress("${libraryItemWrapper.id}-${podcastEpisode.id}")
+                  val description = podcastEpisode.getMediaDescription(libraryItemWrapper, progress, ctx)
+                  MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE)
+                } catch (e: Exception) {
+                  Log.w(tag, "Failed to load local episode description for ${podcastEpisode.id}: ${e.message}")
+                  null
+                }
               }
-              children?.let { cb(children as MutableList) } ?: cb(mutableListOf())
+              cb((children ?: mutableListOf()).toMutableList())
             }
           } else if (libraryItemWrapper is LibraryItem) { // Server podcast episodes
             if (libraryItemWrapper.mediaType != "podcast" || libraryItemWrapper.media.getAudioTracks().isEmpty()) {
@@ -682,23 +690,32 @@ class MediaManager(private var apiHandler: ApiHandler, var ctx: Context) {
               selectedLibraryItemId = libraryItemWrapper.id
               selectedPodcast = podcast
               val episodes = podcast.episodes?.sortedByDescending { it.publishedAt }
-              val children = episodes?.map { podcastEpisode ->
+              val children = episodes?.mapNotNull { podcastEpisode ->
+                try {
+                  val progress = serverUserMediaProgress.find { it.libraryItemId == libraryItemWrapper.id && it.episodeId == podcastEpisode.id }
 
-                val progress = serverUserMediaProgress.find { it.libraryItemId == libraryItemWrapper.id && it.episodeId == podcastEpisode.id }
+                  // to show download icon
+                  val localLibraryItem = DeviceManager.dbManager.getLocalLibraryItemByLId(libraryItemWrapper.id)
+                  localLibraryItem?.let { lli ->
+                    val localEpisode = (lli.media as? Podcast)?.episodes?.find { it.serverEpisodeId == podcastEpisode.id }
+                    podcastEpisode.localEpisodeId = localEpisode?.id
+                  }
 
-                // to show download icon
-                val localLibraryItem = DeviceManager.dbManager.getLocalLibraryItemByLId(libraryItemWrapper.id)
-                localLibraryItem?.let { lli ->
-                  val localEpisode = (lli.media as Podcast).episodes?.find { it.serverEpisodeId == podcastEpisode.id }
-                  podcastEpisode.localEpisodeId = localEpisode?.id
+                  val description = podcastEpisode.getMediaDescription(libraryItemWrapper, progress, ctx)
+                  MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE)
+                } catch (e: Exception) {
+                  Log.w(tag, "Failed to load server episode description for ${podcastEpisode.id}: ${e.message}")
+                  null
                 }
-
-                val description = podcastEpisode.getMediaDescription(libraryItemWrapper, progress, ctx)
-                MediaBrowserCompat.MediaItem(description, MediaBrowserCompat.MediaItem.FLAG_PLAYABLE)
               }
-              children?.let { cb(children as MutableList) } ?: cb(mutableListOf())
+              cb((children ?: mutableListOf()).toMutableList())
             }
+          } else {
+            cb(mutableListOf())
           }
+        } catch (e: Exception) {
+          Log.e(tag, "Error loading podcast episodes for $libraryItemId: ${e.message}", e)
+          cb(mutableListOf())
         }
       }
   }

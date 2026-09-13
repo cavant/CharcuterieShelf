@@ -1,9 +1,17 @@
 package com.audiobookshelf.app.plugins
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.core.app.NotificationCompat
 import com.audiobookshelf.app.MainActivity
+import com.audiobookshelf.app.R
 import com.audiobookshelf.app.data.*
 import com.audiobookshelf.app.device.DeviceManager
 import com.audiobookshelf.app.media.MediaEventManager
@@ -539,5 +547,55 @@ class AbsAudioPlayer : Plugin() {
     val jsobj = JSObject()
     jsobj.put("value", isCastAvailable)
     call.resolve(jsobj)
+  }
+
+  @PluginMethod
+  fun postEpisodeNotification(call: PluginCall) {
+    try {
+      val title = call.getString("title") ?: "New Episode Available"
+      val body = call.getString("body") ?: ""
+      val podcastTitle = call.getString("podcastTitle") ?: "CharcuterieShelf"
+
+      val channelId = "charcuterieshelf_episodes"
+      val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+          channelId,
+          "New Podcast Episodes",
+          NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+          description = "Notifications for newly released podcast episodes"
+        }
+        notificationManager.createNotificationChannel(channel)
+      }
+
+      val intent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+      }
+      val pendingIntent = PendingIntent.getActivity(
+        context,
+        System.currentTimeMillis().toInt(),
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+      )
+
+      val notification = NotificationCompat.Builder(context, channelId)
+        .setSmallIcon(R.drawable.icon_monochrome)
+        .setContentTitle(podcastTitle)
+        .setContentText(title)
+        .setStyle(NotificationCompat.BigTextStyle().bigText(if (body.isNotEmpty()) "$title\n$body" else title))
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .build()
+
+      val notificationId = (System.currentTimeMillis() % 100000).toInt()
+      notificationManager.notify(notificationId, notification)
+      call.resolve()
+    } catch (e: Exception) {
+      Log.e(tag, "postEpisodeNotification error: ${e.message}")
+      call.reject(e.message)
+    }
   }
 }

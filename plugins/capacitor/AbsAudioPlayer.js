@@ -290,6 +290,11 @@ class AbsAudioPlayerWeb extends WebPlugin {
 
     this.loadCurrentTrack()
   }
+
+  async postEpisodeNotification(options) {
+    console.log('[AbsAudioPlayerWeb] postEpisodeNotification', options)
+    return { success: true }
+  }
 }
 
 const AbsAudioPlayer = registerPlugin('AbsAudioPlayer', {

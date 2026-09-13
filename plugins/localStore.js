@@ -321,6 +321,75 @@ export class LocalStorage {
     const filtered = favs.filter(id => id !== itemId)
     await this.setUserPodcastFavorites(userId, serverAddress, filtered)
   }
+
+  // ── Default Home Section (Home | Audiobooks | Podcasts) ───────────────
+  async setDefaultHomeSection(section) {
+    try {
+      await this.preferences.set({ key: 'defaultHomeSection', value: section })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set default home section', error)
+    }
+  }
+
+  async getDefaultHomeSection() {
+    try {
+      const obj = await this.preferences.get({ key: 'defaultHomeSection' }) || {}
+      return obj.value || 'home'
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get default home section', error)
+      return 'home'
+    }
+  }
+
+  // ── Known Podcast Episodes Tracking (for new episode detection) ────────
+  async getKnownPodcastEpisodes(podcastId) {
+    if (!podcastId) return null
+    try {
+      const obj = await this.preferences.get({ key: `known_episodes_${podcastId}` }) || {}
+      return obj.value ? JSON.parse(obj.value) : null
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get known podcast episodes', error)
+      return null
+    }
+  }
+
+  async setKnownPodcastEpisodes(podcastId, episodeIds) {
+    if (!podcastId) return
+    try {
+      await this.preferences.set({ key: `known_episodes_${podcastId}`, value: JSON.stringify(episodeIds || []) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set known podcast episodes', error)
+    }
+  }
+
+  // ── Global Podcast Automation Settings ────────────────────────────────
+  async getGlobalPodcastAutomationSettings() {
+    try {
+      const obj = await this.preferences.get({ key: 'globalPodcastAutomation' }) || {}
+      return obj.value ? JSON.parse(obj.value) : {
+        autoDownloadNew: false,
+        notifyNewEpisodes: true,
+        autoAddToQueue: false,
+        queuePosition: 'last'
+      }
+    } catch (error) {
+      console.error('[LocalStorage] Failed to get global podcast automation settings', error)
+      return {
+        autoDownloadNew: false,
+        notifyNewEpisodes: true,
+        autoAddToQueue: false,
+        queuePosition: 'last'
+      }
+    }
+  }
+
+  async setGlobalPodcastAutomationSettings(settings) {
+    try {
+      await this.preferences.set({ key: 'globalPodcastAutomation', value: JSON.stringify(settings) })
+    } catch (error) {
+      console.error('[LocalStorage] Failed to set global podcast automation settings', error)
+    }
+  }
 }
 
 export default ({ app, store }, inject) => {

@@ -77,6 +77,66 @@
           <ui-toggle-switch v-model="autoDelete" />
         </div>
 
+        <!-- Auto-Download New Episodes -->
+        <div class="bg-primary/40 rounded-xl p-4 border border-border/50 flex items-center justify-between">
+          <div class="flex-1 pr-4">
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="material-symbols text-fg text-lg">download</span>
+              <p class="text-sm font-semibold text-fg">Auto-Download New Episodes</p>
+            </div>
+            <p class="text-xs text-fg-muted">Automatically download newly published episodes straight to your device.</p>
+          </div>
+          <ui-toggle-switch v-model="autoDownloadNew" />
+        </div>
+
+        <!-- New Episode Notifications -->
+        <div class="bg-primary/40 rounded-xl p-4 border border-border/50 flex items-center justify-between">
+          <div class="flex-1 pr-4">
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="material-symbols text-fg text-lg">notifications</span>
+              <p class="text-sm font-semibold text-fg">New Episode Notifications</p>
+            </div>
+            <p class="text-xs text-fg-muted">Receive a notification when new episodes become available for this show.</p>
+          </div>
+          <ui-toggle-switch v-model="notifyNewEpisodes" />
+        </div>
+
+        <!-- Auto-Add to Up Next Queue -->
+        <div class="bg-primary/40 rounded-xl p-4 border border-border/50">
+          <div class="flex items-center justify-between">
+            <div class="flex-1 pr-4">
+              <div class="flex items-center space-x-2 mb-1">
+                <span class="material-symbols text-fg text-lg">queue_music</span>
+                <p class="text-sm font-semibold text-fg">Auto-Add to Queue</p>
+              </div>
+              <p class="text-xs text-fg-muted">Automatically add newly released episodes to your playback queue.</p>
+            </div>
+            <ui-toggle-switch v-model="autoAddToQueue" />
+          </div>
+
+          <div v-if="autoAddToQueue" class="mt-3 pt-3 border-t border-border/40 flex items-center justify-between">
+            <span class="text-xs font-semibold text-fg">Queue Position</span>
+            <div class="flex items-center bg-secondary rounded-lg p-0.5 border border-border/60">
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-md text-xs font-semibold transition-colors"
+                :class="queuePosition === 'next' ? 'bg-accent text-black font-bold' : 'text-fg-muted hover:text-fg'"
+                @click="queuePosition = 'next'"
+              >
+                Play Next
+              </button>
+              <button
+                type="button"
+                class="px-2.5 py-1 rounded-md text-xs font-semibold transition-colors"
+                :class="queuePosition === 'last' ? 'bg-accent text-black font-bold' : 'text-fg-muted hover:text-fg'"
+                @click="queuePosition = 'last'"
+              >
+                Play Last
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Custom Playback Speed -->
         <div class="bg-primary/40 rounded-xl p-4 border border-border/50">
           <div class="flex items-center justify-between mb-1">
@@ -129,6 +189,10 @@ export default {
       skipSilence: false,
       autoDelete: true,
       customSpeed: null,
+      autoDownloadNew: false,
+      notifyNewEpisodes: true,
+      autoAddToQueue: false,
+      queuePosition: 'last',
       speedOptions: [
         { label: 'Global', value: null },
         { label: '0.8x', value: 0.8 },
@@ -175,6 +239,7 @@ export default {
     },
     async loadSettings() {
       if (!this.libraryItemId) return
+      const globalAuto = await this.$localStore.getGlobalPodcastAutomationSettings()
       const saved = await this.$localStore.getPodcastSettings(this.libraryItemId)
       if (saved) {
         this.skipFirst = saved.skipFirst || 0
@@ -182,12 +247,20 @@ export default {
         this.skipSilence = !!saved.skipSilence
         this.autoDelete = saved.autoDelete !== undefined ? !!saved.autoDelete : true
         this.customSpeed = saved.customSpeed || null
+        this.autoDownloadNew = saved.autoDownloadNew !== undefined ? !!saved.autoDownloadNew : globalAuto.autoDownloadNew
+        this.notifyNewEpisodes = saved.notifyNewEpisodes !== undefined ? !!saved.notifyNewEpisodes : globalAuto.notifyNewEpisodes
+        this.autoAddToQueue = saved.autoAddToQueue !== undefined ? !!saved.autoAddToQueue : globalAuto.autoAddToQueue
+        this.queuePosition = saved.queuePosition || globalAuto.queuePosition || 'last'
       } else {
         this.skipFirst = 0
         this.skipLast = 0
         this.skipSilence = false
         this.autoDelete = true
         this.customSpeed = null
+        this.autoDownloadNew = globalAuto.autoDownloadNew
+        this.notifyNewEpisodes = globalAuto.notifyNewEpisodes
+        this.autoAddToQueue = globalAuto.autoAddToQueue
+        this.queuePosition = globalAuto.queuePosition || 'last'
       }
     },
     async save() {
@@ -196,7 +269,11 @@ export default {
         skipLast: this.skipLast,
         skipSilence: this.skipSilence,
         autoDelete: this.autoDelete,
-        customSpeed: this.customSpeed
+        customSpeed: this.customSpeed,
+        autoDownloadNew: this.autoDownloadNew,
+        notifyNewEpisodes: this.notifyNewEpisodes,
+        autoAddToQueue: this.autoAddToQueue,
+        queuePosition: this.queuePosition
       }
       if (this.libraryItemId) {
         await this.$localStore.setPodcastSettings(this.libraryItemId, settings)

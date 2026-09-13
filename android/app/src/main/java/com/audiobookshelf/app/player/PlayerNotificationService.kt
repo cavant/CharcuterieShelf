@@ -316,7 +316,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     // player's own state on media item transitions/timeline changes, dropping the cover art
     // bitmap that PlaybackSession.resolveCoverBitmapAsync resolves separately.
     mediaSessionConnector.setMediaMetadataProvider { _ ->
-      currentPlaybackSession?.getMediaMetadataCompat(ctx) ?: MediaMetadataCompat.Builder().build()
+      currentPlaybackSession?.getMediaMetadataCompat(ctx)
+        ?: DeviceManager.deviceData.lastPlaybackSession?.getMediaMetadataCompat(ctx)
+        ?: MediaMetadataCompat.Builder().build()
     }
     val queueNavigator: TimelineQueueNavigator =
             object : TimelineQueueNavigator(mediaSession) {
@@ -391,6 +393,45 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
 
     initializeMPlayer()
     currentPlayer = mPlayer
+
+    restoreLastPlaybackSessionIfNeeded()
+  }
+
+  fun restoreLastPlaybackSessionIfNeeded() {
+    if (currentPlaybackSession != null) return
+    try {
+      val lastSession = DeviceManager.deviceData.lastPlaybackSession ?: return
+      AbsLogger.info(tag, "restoreLastPlaybackSessionIfNeeded: Restoring last session ${lastSession.displayTitle} (${lastSession.id})")
+      val metadata = lastSession.getMediaMetadataCompat(ctx)
+      mediaSession.setMetadata(metadata)
+
+      val actions = PlaybackStateCompat.ACTION_PLAY or
+              PlaybackStateCompat.ACTION_PAUSE or
+              PlaybackStateCompat.ACTION_PLAY_PAUSE or
+              PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+              PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
+              PlaybackStateCompat.ACTION_FAST_FORWARD or
+              PlaybackStateCompat.ACTION_REWIND or
+              PlaybackStateCompat.ACTION_SEEK_TO
+
+      val positionMs = (lastSession.currentTime * 1000.0).toLong()
+      val playbackState = PlaybackStateCompat.Builder()
+              .setActions(actions)
+              .setState(PlaybackStateCompat.STATE_PAUSED, positionMs, 1f)
+              .build()
+
+      mediaSession.setPlaybackState(playbackState)
+      mediaSession.isActive = true
+
+      // Resolve cover bitmap asynchronously if not yet resolved
+      lastSession.resolveCoverBitmapAsync(ctx, metadataScope) {
+        if (currentPlaybackSession == null) {
+          mediaSession.setMetadata(lastSession.getMediaMetadataCompat(ctx))
+        }
+      }
+    } catch (e: Exception) {
+      AbsLogger.error(tag, "restoreLastPlaybackSessionIfNeeded: Failed: ${e.message}")
+    }
   }
 
   private fun initializeMPlayer() {
@@ -1067,6 +1108,17 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       Log.d(tag, "Already playing")
       return
     }
+    if (currentPlaybackSession == null && DeviceManager.deviceData.lastPlaybackSession != null) {
+      val lastSession = DeviceManager.deviceData.lastPlaybackSession!!
+      AbsLogger.info(tag, "play: Resuming last playback session: ${lastSession.displayTitle}")
+      val connectionConfig = DeviceManager.deviceData.serverConnectionConfigs.find { it.id == lastSession.serverConnectionConfigId }
+      connectionConfig?.let {
+        DeviceManager.serverConnectionConfig = it
+      }
+      val playbackRate = mediaManager.getSavedPlaybackRate()
+      preparePlayer(lastSession, true, playbackRate)
+      return
+    }
     currentPlayer.volume = 1F
     currentPlayer.play()
   }
@@ -1344,6 +1396,9 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       // sessionActivity is intentionally never set in onCreate(), but null it explicitly as a safety net.
       mediaSession.setSessionActivity(null)
 
+      // Restore last played session so Android Auto taskbar widget displays it immediately
+      restoreLastPlaybackSessionIfNeeded()
+
       val extras = Bundle()
       extras.putBoolean(MediaConstants.BROWSER_SERVICE_EXTRAS_KEY_SEARCH_SUPPORTED, true)
       extras.putInt(
@@ -1374,96 +1429,116 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     }
 
     if (parentMediaId == DOWNLOADS_ROOT) { // Load downloads
-      val localBooks = DeviceManager.dbManager.getLocalLibraryItems("book")
-      val localPodcasts = DeviceManager.dbManager.getLocalLibraryItems("podcast")
       val localBrowseItems: MutableList<MediaBrowserCompat.MediaItem> = mutableListOf()
+      try {
+        val localBooks = DeviceManager.dbManager.getLocalLibraryItems("book")
+        val localPodcasts = DeviceManager.dbManager.getLocalLibraryItems("podcast")
 
-      localBooks.forEach { localLibraryItem ->
-        if (localLibraryItem.media.getAudioTracks().isNotEmpty()) {
-          val progress = DeviceManager.dbManager.getLocalMediaProgress(localLibraryItem.id)
-          val description = localLibraryItem.getMediaDescription(progress, ctx)
+        localBooks.forEach { localLibraryItem ->
+          try {
+            if (localLibraryItem.media.getAudioTracks().isNotEmpty()) {
+              val progress = DeviceManager.dbManager.getLocalMediaProgress(localLibraryItem.id)
+              val description = localLibraryItem.getMediaDescription(progress, ctx)
 
-          localBrowseItems +=
-                  MediaBrowserCompat.MediaItem(
-                          description,
-                          MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
-                  )
+              localBrowseItems +=
+                      MediaBrowserCompat.MediaItem(
+                              description,
+                              MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+                      )
+            }
+          } catch (e: Exception) {
+            AbsLogger.error(tag, "onLoadChildren: Error resolving local book ${localLibraryItem.id}: ${e.message}")
+          }
         }
-      }
 
-      localPodcasts.forEach { localLibraryItem ->
-        val mediaDescription = localLibraryItem.getMediaDescription(null, ctx)
-        localBrowseItems +=
-                MediaBrowserCompat.MediaItem(
-                        mediaDescription,
-                        MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                )
+        localPodcasts.forEach { localLibraryItem ->
+          try {
+            val mediaDescription = localLibraryItem.getMediaDescription(null, ctx)
+            localBrowseItems +=
+                    MediaBrowserCompat.MediaItem(
+                            mediaDescription,
+                            MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
+                    )
+          } catch (e: Exception) {
+            AbsLogger.error(tag, "onLoadChildren: Error resolving local podcast ${localLibraryItem.id}: ${e.message}")
+          }
+        }
+      } catch (e: Exception) {
+        AbsLogger.error(tag, "onLoadChildren: Failed to load downloads: ${e.message}")
       }
 
       result.sendResult(localBrowseItems)
     } else if (parentMediaId == CONTINUE_ROOT) {
       val localBrowseItems: MutableList<MediaBrowserCompat.MediaItem> = mutableListOf()
-      mediaManager.serverItemsInProgress.forEach { itemInProgress ->
-        val progress: MediaProgressWrapper?
-        val mediaDescription: MediaDescriptionCompat
-        if (itemInProgress.episode != null) {
-          if (itemInProgress.isLocal) {
-            progress =
-                    DeviceManager.dbManager.getLocalMediaProgress(
-                            "${itemInProgress.libraryItemWrapper.id}-${itemInProgress.episode.id}"
-                    )
-          } else {
-            progress =
-                    mediaManager.serverUserMediaProgress.find {
-                      it.libraryItemId == itemInProgress.libraryItemWrapper.id &&
-                              it.episodeId == itemInProgress.episode.id
-                    }
+      try {
+        mediaManager.serverItemsInProgress.forEach { itemInProgress ->
+          try {
+            val progress: MediaProgressWrapper?
+            val mediaDescription: MediaDescriptionCompat
+            if (itemInProgress.episode != null) {
+              if (itemInProgress.isLocal) {
+                progress =
+                        DeviceManager.dbManager.getLocalMediaProgress(
+                                "${itemInProgress.libraryItemWrapper.id}-${itemInProgress.episode.id}"
+                        )
+              } else {
+                progress =
+                        mediaManager.serverUserMediaProgress.find {
+                          it.libraryItemId == itemInProgress.libraryItemWrapper.id &&
+                                  it.episodeId == itemInProgress.episode.id
+                        }
 
-            // to show download icon
-            val localLibraryItem =
-                    DeviceManager.dbManager.getLocalLibraryItemByLId(
-                            itemInProgress.libraryItemWrapper.id
-                    )
-            localLibraryItem?.let { lli ->
-              val localEpisode =
-                      (lli.media as Podcast).episodes?.find {
-                        it.serverEpisodeId == itemInProgress.episode.id
-                      }
-              itemInProgress.episode.localEpisodeId = localEpisode?.id
+                // to show download icon
+                val localLibraryItem =
+                        DeviceManager.dbManager.getLocalLibraryItemByLId(
+                                itemInProgress.libraryItemWrapper.id
+                        )
+                localLibraryItem?.let { lli ->
+                  val localEpisode =
+                          (lli.media as? Podcast)?.episodes?.find {
+                            it.serverEpisodeId == itemInProgress.episode.id
+                          }
+                  itemInProgress.episode.localEpisodeId = localEpisode?.id
+                }
+              }
+              mediaDescription =
+                      itemInProgress.episode.getMediaDescription(
+                              itemInProgress.libraryItemWrapper,
+                              progress,
+                              ctx
+                      )
+            } else {
+              if (itemInProgress.isLocal) {
+                progress =
+                        DeviceManager.dbManager.getLocalMediaProgress(
+                                itemInProgress.libraryItemWrapper.id
+                        )
+              } else {
+                progress =
+                        mediaManager.serverUserMediaProgress.find {
+                          it.libraryItemId == itemInProgress.libraryItemWrapper.id
+                        }
+
+                val localLibraryItem =
+                        DeviceManager.dbManager.getLocalLibraryItemByLId(
+                                itemInProgress.libraryItemWrapper.id
+                        )
+                (itemInProgress.libraryItemWrapper as? LibraryItem)?.localLibraryItemId =
+                        localLibraryItem?.id // To show downloaded icon
+              }
+              mediaDescription = itemInProgress.libraryItemWrapper.getMediaDescription(progress, ctx)
             }
-          }
-          mediaDescription =
-                  itemInProgress.episode.getMediaDescription(
-                          itemInProgress.libraryItemWrapper,
-                          progress,
-                          ctx
-                  )
-        } else {
-          if (itemInProgress.isLocal) {
-            progress =
-                    DeviceManager.dbManager.getLocalMediaProgress(
-                            itemInProgress.libraryItemWrapper.id
+            localBrowseItems +=
+                    MediaBrowserCompat.MediaItem(
+                            mediaDescription,
+                            MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
                     )
-          } else {
-            progress =
-                    mediaManager.serverUserMediaProgress.find {
-                      it.libraryItemId == itemInProgress.libraryItemWrapper.id
-                    }
-
-            val localLibraryItem =
-                    DeviceManager.dbManager.getLocalLibraryItemByLId(
-                            itemInProgress.libraryItemWrapper.id
-                    )
-            (itemInProgress.libraryItemWrapper as LibraryItem).localLibraryItemId =
-                    localLibraryItem?.id // To show downloaded icon
+          } catch (e: Exception) {
+            AbsLogger.error(tag, "onLoadChildren: Error resolving continue item: ${e.message}")
           }
-          mediaDescription = itemInProgress.libraryItemWrapper.getMediaDescription(progress, ctx)
         }
-        localBrowseItems +=
-                MediaBrowserCompat.MediaItem(
-                        mediaDescription,
-                        MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
-                )
+      } catch (e: Exception) {
+        AbsLogger.error(tag, "onLoadChildren: Failed to load continue items: ${e.message}")
       }
       result.sendResult(localBrowseItems)
     } else if (parentMediaId == AUTO_MEDIA_ROOT) {
@@ -1524,7 +1599,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
           }
         }
       }
-    } else if (parentMediaId == LIBRARIES_ROOT || parentMediaId == RECENTLY_ROOT)
+    } else if (parentMediaId == HOME_ROOT || parentMediaId == LIBRARIES_ROOT || parentMediaId == RECENTLY_ROOT)
     {
       Log.d(tag, "First load done: $firstLoadDone")
       if (!firstLoadDone)
@@ -1702,94 +1777,122 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
           if (shelf === null) {
             result.sendResult(mutableListOf())
           } else {
-            if (shelf.type == "book") {
-              val children =
-                      (shelf as LibraryShelfBookEntity).entities?.map { libraryItem ->
-                        val progress =
-                                mediaManager.serverUserMediaProgress.find {
-                                  it.libraryItemId == libraryItem.id
-                                }
-                        val localLibraryItem =
-                                DeviceManager.dbManager.getLocalLibraryItemByLId(libraryItem.id)
-                        libraryItem.localLibraryItemId = localLibraryItem?.id
-                        val description =
-                                libraryItem.getMediaDescription(progress, ctx, null, false)
-                        MediaBrowserCompat.MediaItem(
-                                description,
-                                MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
-                        )
-                      }
-              result.sendResult(children as MutableList<MediaBrowserCompat.MediaItem>?)
-            } else if (shelf.type == "episode") {
-              val episodesWithRecentEpisode =
-                      (shelf as LibraryShelfEpisodeEntity).entities?.filter { libraryItem ->
-                        libraryItem.recentEpisode !== null
-                      }
-              val children =
-                      episodesWithRecentEpisode?.map { libraryItem ->
-                        val podcast = libraryItem.media as Podcast
-                        val progress =
-                                mediaManager.serverUserMediaProgress.find {
-                                  it.libraryItemId == libraryItem.libraryId &&
-                                          it.episodeId == libraryItem.recentEpisode?.id
-                                }
-
-                        // to show download icon
-                        val localLibraryItem =
-                                DeviceManager.dbManager.getLocalLibraryItemByLId(
-                                        libraryItem.recentEpisode!!.id
-                                )
-                        localLibraryItem?.let { lli ->
-                          val localEpisode =
-                                  (lli.media as Podcast).episodes?.find {
-                                    it.serverEpisodeId == libraryItem.recentEpisode.id
-                                  }
-                          libraryItem.recentEpisode.localEpisodeId = localEpisode?.id
+            try {
+              if (shelf.type == "book") {
+                val children =
+                        (shelf as? LibraryShelfBookEntity)?.entities?.mapNotNull { libraryItem ->
+                          try {
+                            val progress =
+                                    mediaManager.serverUserMediaProgress.find {
+                                      it.libraryItemId == libraryItem.id
+                                    }
+                            val localLibraryItem =
+                                    DeviceManager.dbManager.getLocalLibraryItemByLId(libraryItem.id)
+                            libraryItem.localLibraryItemId = localLibraryItem?.id
+                            val description =
+                                    libraryItem.getMediaDescription(progress, ctx, null, false)
+                            MediaBrowserCompat.MediaItem(
+                                    description,
+                                    MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+                            )
+                          } catch (e: Exception) {
+                            AbsLogger.error(tag, "Error building book item: ${e.message}")
+                            null
+                          }
                         }
+                result.sendResult((children ?: emptyList()).toMutableList())
+              } else if (shelf.type == "episode") {
+                val episodesWithRecentEpisode =
+                        (shelf as? LibraryShelfEpisodeEntity)?.entities?.filter { libraryItem ->
+                          libraryItem.recentEpisode != null
+                        }
+                val children =
+                        episodesWithRecentEpisode?.mapNotNull { libraryItem ->
+                          try {
+                            val episode = libraryItem.recentEpisode ?: return@mapNotNull null
+                            val progress =
+                                    mediaManager.serverUserMediaProgress.find {
+                                      it.libraryItemId == libraryItem.libraryId &&
+                                              it.episodeId == episode.id
+                                    }
 
-                        val description =
-                                libraryItem.recentEpisode.getMediaDescription(
-                                        libraryItem,
-                                        progress,
-                                        ctx
-                                )
-                        MediaBrowserCompat.MediaItem(
-                                description,
-                                MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
-                        )
-                      }
-              result.sendResult(children as MutableList<MediaBrowserCompat.MediaItem>?)
-            } else if (shelf.type == "podcast") {
-              val children =
-                      (shelf as LibraryShelfPodcastEntity).entities?.map { libraryItem ->
-                        val mediaDescription = libraryItem.getMediaDescription(null, ctx)
-                        MediaBrowserCompat.MediaItem(
-                                mediaDescription,
-                                MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                        )
-                      }
-              result.sendResult(children as MutableList<MediaBrowserCompat.MediaItem>?)
-            } else if (shelf.type == "series") {
-              val children =
-                      (shelf as LibraryShelfSeriesEntity).entities?.map { librarySeriesItem ->
-                        val description = librarySeriesItem.getMediaDescription(null, ctx)
-                        MediaBrowserCompat.MediaItem(
-                                description,
-                                MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                        )
-                      }
-              result.sendResult(children as MutableList<MediaBrowserCompat.MediaItem>?)
-            } else if (shelf.type == "authors") {
-              val children =
-                      (shelf as LibraryShelfAuthorEntity).entities?.map { authorItem ->
-                        val description = authorItem.getMediaDescription(null, ctx)
-                        MediaBrowserCompat.MediaItem(
-                                description,
-                                MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
-                        )
-                      }
-              result.sendResult(children as MutableList<MediaBrowserCompat.MediaItem>?)
-            } else {
+                            // to show download icon
+                            val localLibraryItem =
+                                    DeviceManager.dbManager.getLocalLibraryItemByLId(libraryItem.id)
+                            localLibraryItem?.let { lli ->
+                              val localEpisode =
+                                      (lli.media as? Podcast)?.episodes?.find {
+                                        it.serverEpisodeId == episode.id || it.id == episode.id
+                                      }
+                              episode.localEpisodeId = localEpisode?.id
+                            }
+
+                            val description =
+                                    episode.getMediaDescription(
+                                            libraryItem,
+                                            progress,
+                                            ctx
+                                    )
+                            MediaBrowserCompat.MediaItem(
+                                    description,
+                                    MediaBrowserCompat.MediaItem.FLAG_PLAYABLE
+                            )
+                          } catch (e: Exception) {
+                            AbsLogger.error(tag, "Error building episode item: ${e.message}")
+                            null
+                          }
+                        }
+                result.sendResult((children ?: emptyList()).toMutableList())
+              } else if (shelf.type == "podcast") {
+                val children =
+                        (shelf as? LibraryShelfPodcastEntity)?.entities?.mapNotNull { libraryItem ->
+                          try {
+                            val mediaDescription = libraryItem.getMediaDescription(null, ctx)
+                            MediaBrowserCompat.MediaItem(
+                                    mediaDescription,
+                                    MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
+                            )
+                          } catch (e: Exception) {
+                            AbsLogger.error(tag, "Error building podcast item: ${e.message}")
+                            null
+                          }
+                        }
+                result.sendResult((children ?: emptyList()).toMutableList())
+              } else if (shelf.type == "series") {
+                val children =
+                        (shelf as? LibraryShelfSeriesEntity)?.entities?.mapNotNull { librarySeriesItem ->
+                          try {
+                            val description = librarySeriesItem.getMediaDescription(null, ctx)
+                            MediaBrowserCompat.MediaItem(
+                                    description,
+                                    MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
+                            )
+                          } catch (e: Exception) {
+                            AbsLogger.error(tag, "Error building series item: ${e.message}")
+                            null
+                          }
+                        }
+                result.sendResult((children ?: emptyList()).toMutableList())
+              } else if (shelf.type == "authors") {
+                val children =
+                        (shelf as? LibraryShelfAuthorEntity)?.entities?.mapNotNull { authorItem ->
+                          try {
+                            val description = authorItem.getMediaDescription(null, ctx)
+                            MediaBrowserCompat.MediaItem(
+                                    description,
+                                    MediaBrowserCompat.MediaItem.FLAG_BROWSABLE
+                            )
+                          } catch (e: Exception) {
+                            AbsLogger.error(tag, "Error building author item: ${e.message}")
+                            null
+                          }
+                        }
+                result.sendResult((children ?: emptyList()).toMutableList())
+              } else {
+                result.sendResult(mutableListOf())
+              }
+            } catch (e: Exception) {
+              AbsLogger.error(tag, "Error parsing shelf data: ${e.message}")
               result.sendResult(mutableListOf())
             }
           }

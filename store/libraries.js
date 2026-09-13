@@ -4,6 +4,7 @@ export const state = () => ({
   libraries: [],
   lastLoad: 0,
   currentLibraryId: '',
+  currentSection: 'home',
   showModal: false,
   issues: 0,
   filterData: null,
@@ -12,6 +13,9 @@ export const state = () => ({
 })
 
 export const getters = {
+  getCurrentSection: state => {
+    return state.currentSection || 'home'
+  },
   getCurrentLibrary: state => {
     return state.libraries.find(lib => lib.id === state.currentLibraryId)
   },
@@ -181,5 +185,8 @@ export const mutations = {
   },
   setEReaderDevices(state, ereaderDevices) {
     state.ereaderDevices = ereaderDevices
+  },
+  setCurrentSection(state, section) {
+    state.currentSection = section || 'home'
   }
 }

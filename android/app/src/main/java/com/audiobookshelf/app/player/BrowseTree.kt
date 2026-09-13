@@ -42,6 +42,24 @@ class BrowseTree(
       putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, getUriToDrawable(context, R.drawable.icon_library_folder).toString())
     }.build()
 
+    val homeMetadata = MediaMetadataCompat.Builder().apply {
+      putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, HOME_ROOT)
+      putString(MediaMetadataCompat.METADATA_KEY_TITLE, "Home")
+      putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, getUriToDrawable(context, R.drawable.abs_audiobookshelf).toString())
+    }.build()
+
+    val homeChildren = mutableListOf<MediaMetadataCompat>()
+    if (itemsInProgress.isNotEmpty()) {
+      homeChildren += continueListeningMetadata
+    }
+    if (recentsLoaded) {
+      homeChildren += recentMetadata
+    }
+    homeChildren += downloadsMetadata
+    mediaIdToChildren[HOME_ROOT] = homeChildren
+
+    rootList += homeMetadata
+
     if (itemsInProgress.isNotEmpty()) {
       rootList += continueListeningMetadata
     }
@@ -81,6 +99,7 @@ class BrowseTree(
 }
 
 const val AUTO_BROWSE_ROOT = "/"
+const val HOME_ROOT = "__HOME__"
 const val CONTINUE_ROOT = "__CONTINUE__"
 const val DOWNLOADS_ROOT = "__DOWNLOADS__"
 const val LIBRARIES_ROOT = "__LIBRARIES__"

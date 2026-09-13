@@ -104,6 +104,12 @@ export default {
     currentLibraryIsPodcast() {
       return this.currentLibraryMediaType === 'podcast'
     },
+    currentSection() {
+      return this.$store.getters['libraries/getCurrentSection'] || 'home'
+    },
+    libraries() {
+      return this.$store.state.libraries.libraries || []
+    },
     altViewEnabled() {
       return this.$store.getters['getAltViewEnabled']
     },
@@ -207,26 +213,23 @@ export default {
       return categories
     },
     async fetchCategories() {
-      console.log(`[categories] fetchCategories networkConnected=${this.networkConnected}, lastServerFetch=${this.lastServerFetch}, lastLocalFetch=${this.lastLocalFetch}`)
+      console.log(`[categories] fetchCategories networkConnected=${this.networkConnected}, lastServerFetch=${this.lastServerFetch}, lastLocalFetch=${this.lastLocalFetch}, section=${this.currentSection}`)
 
-      // TODO: Find a better way to keep the shelf up-to-date with local vs server library because this is a disaster
-      const isConnectedToServerWithInternet = this.user && this.currentLibraryId && this.networkConnected
+      const isConnectedToServerWithInternet = this.user && this.networkConnected
       if (isConnectedToServerWithInternet) {
-        if (this.lastServerFetch && Date.now() - this.lastServerFetch < 5000 && this.lastServerFetchLibraryId == this.currentLibraryId) {
+        const fetchKey = `${this.currentLibraryId}_${this.currentSection}`
+        if (this.lastServerFetch && Date.now() - this.lastServerFetch < 3000 && this.lastServerFetchLibraryId == fetchKey) {
           console.log(`[categories] fetchCategories server fetch was ${Date.now() - this.lastServerFetch}ms ago so not doing it.`)
           return
         } else {
-          console.log(`[categories] fetchCategories fetching from server. Last was ${this.lastServerFetch ? Date.now() - this.lastServerFetch + 'ms' : 'Never'} ago. lastServerFetchLibraryId=${this.lastServerFetchLibraryId} and currentLibraryId=${this.currentLibraryId}`)
-          this.lastServerFetchLibraryId = this.currentLibraryId
+          this.lastServerFetchLibraryId = fetchKey
           this.lastServerFetch = Date.now()
           this.lastLocalFetch = 0
         }
       } else {
         if (this.lastLocalFetch && Date.now() - this.lastLocalFetch < 5000) {
-          console.log(`[categories] fetchCategories local fetch was ${Date.now() - this.lastLocalFetch}ms ago so not doing it.`)
           return
         } else {
-          console.log(`[categories] fetchCategories fetching from local. Last was ${this.lastLocalFetch ? Date.now() - this.lastLocalFetch + 'ms' : 'Never'} ago`)
           this.lastServerFetchLibraryId = null
           this.lastServerFetch = 0
           this.lastLocalFetch = Date.now()
@@ -239,56 +242,81 @@ export default {
       this.localLibraryItems = await this.$db.getLocalLibraryItems()
       const localCategories = this.getLocalMediaItemCategories()
       this.shelves = localCategories
-      console.log('[categories] Local shelves set', this.shelves.length, this.lastLocalFetch)
 
       if (isConnectedToServerWithInternet) {
-        const categories = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/personalized?minified=1&include=rssfeed,numEpisodesIncomplete`, { connectTimeout: 10000 }).catch((error) => {
-          console.error('[categories] Failed to fetch categories', error)
-          return []
-        })
-        if (!categories.length) {
-          // Failed to load categories so use local shelves
-          console.warn(`[categories] Failed to get server categories so using local categories`)
-          this.lastServerFetch = 0
-          this.lastLocalFetch = Date.now()
-          this.isLoading = false
-          console.log('[categories] Local shelves set from failure', this.shelves.length, this.lastLocalFetch)
-          return
-        }
-
+        let rawCategories = []
         let subs = null
-        if (this.currentLibraryIsPodcast && this.user?.id && this.$store.getters['user/getServerAddress']) {
+        if (this.user?.id && this.$store.getters['user/getServerAddress']) {
           subs = (await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.$store.getters['user/getServerAddress'])) || []
         }
 
-        this.shelves = categories.map((cat) => {
-          if (cat.type == 'book' || cat.type == 'podcast' || cat.type == 'episode') {
-            // Map localLibraryItem to entities
-            cat.entities = cat.entities.map((entity) => {
-              const localLibraryItem = this.localLibraryItems.find((lli) => {
-                return lli.libraryItemId == entity.id
-              })
-              if (localLibraryItem) {
-                entity.localLibraryItem = localLibraryItem
-              }
-              return entity
-            })
+        if (this.currentSection === 'home') {
+          // Combined Home: fetch personalized data for both books and podcasts
+          const bookLib = this.libraries.find(l => l.mediaType === 'book')
+          const podcastLib = this.libraries.find(l => l.mediaType === 'podcast')
 
-            // Filter by user subscriptions if podcast
-            if (subs && Array.isArray(subs)) {
-              cat.entities = cat.entities.filter((entity) => {
-                const id = entity.id || entity.libraryItemId
-                return subs.includes(id)
-              })
-            }
+          const requests = []
+          if (bookLib) {
+            requests.push(this.$nativeHttp.get(`/api/libraries/${bookLib.id}/personalized?minified=1`, { connectTimeout: 10000 }).catch(e => []))
           }
-          return cat
-        }).filter((cat) => cat.entities && cat.entities.length)
+          if (podcastLib) {
+            requests.push(this.$nativeHttp.get(`/api/libraries/${podcastLib.id}/personalized?minified=1&include=rssfeed,numEpisodesIncomplete`, { connectTimeout: 10000 }).catch(e => []))
+          }
 
-        // Only add the local shelf with the same media type
-        const localShelves = localCategories.filter((cat) => cat.type === this.currentLibraryMediaType && !cat.localOnly)
-        this.shelves.push(...localShelves)
-        console.log('[categories] Server shelves set', this.shelves.length, this.lastServerFetch)
+          const results = await Promise.all(requests)
+          const allShelves = results.flat()
+
+          // Keep continue-listening at the top across both mediums
+          const continueListeningShelves = allShelves.filter(s => s.id === 'continue-listening' || s.id === 'continue-reading' || s.label?.toLowerCase()?.includes('continue'))
+          const otherShelves = allShelves.filter(s => !continueListeningShelves.includes(s))
+          rawCategories = [...continueListeningShelves, ...otherShelves]
+        } else if (this.currentSection === 'podcast') {
+          const podcastLib = (this.currentLibraryMediaType === 'podcast' ? this.currentLibrary : null) || this.libraries.find(l => l.mediaType === 'podcast')
+          if (podcastLib) {
+            rawCategories = await this.$nativeHttp.get(`/api/libraries/${podcastLib.id}/personalized?minified=1&include=rssfeed,numEpisodesIncomplete`, { connectTimeout: 10000 }).catch(e => [])
+          }
+        } else {
+          const bookLib = (this.currentLibraryMediaType === 'book' ? this.currentLibrary : null) || this.libraries.find(l => l.mediaType === 'book')
+          if (bookLib) {
+            rawCategories = await this.$nativeHttp.get(`/api/libraries/${bookLib.id}/personalized?minified=1`, { connectTimeout: 10000 }).catch(e => [])
+          }
+        }
+
+        if (rawCategories.length) {
+          this.shelves = rawCategories.map((cat) => {
+            if (cat.type == 'book' || cat.type == 'podcast' || cat.type == 'episode') {
+              // Map localLibraryItem to entities
+              cat.entities = (cat.entities || []).map((entity) => {
+                const localLibraryItem = this.localLibraryItems.find((lli) => {
+                  return lli.libraryItemId == entity.id
+                })
+                if (localLibraryItem) {
+                  entity.localLibraryItem = localLibraryItem
+                }
+                return entity
+              })
+
+              // Filter by user subscriptions if podcast
+              if ((cat.type === 'podcast' || cat.type === 'episode') && subs && Array.isArray(subs)) {
+                cat.entities = cat.entities.filter((entity) => {
+                  const id = entity.id || entity.libraryItemId
+                  return subs.includes(id)
+                })
+              }
+            }
+            return cat
+          }).filter((cat) => cat.entities && cat.entities.length)
+
+          // Append local shelves
+          if (this.currentSection === 'home') {
+            const localShelves = localCategories.filter((cat) => !cat.localOnly)
+            this.shelves.push(...localShelves)
+          } else {
+            const targetType = this.currentSection === 'podcast' ? 'podcast' : 'book'
+            const localShelves = localCategories.filter((cat) => cat.type === targetType && !cat.localOnly)
+            this.shelves.push(...localShelves)
+          }
+        }
       }
 
       this.isLoading = false
@@ -300,7 +328,6 @@ export default {
       }
     },
     audiobookAdded(audiobook) {
-      // TODO: Check if audiobook would be on this shelf
       if (!this.search) {
         this.fetchCategories()
       }
@@ -341,10 +368,12 @@ export default {
     },
     initListeners() {
       this.$eventBus.$on('library-changed', this.libraryChanged)
+      this.$eventBus.$on('section-changed', this.fetchCategories)
       this.$eventBus.$on('podcast-subscription-changed', this.fetchCategories)
     },
     removeListeners() {
       this.$eventBus.$off('library-changed', this.libraryChanged)
+      this.$eventBus.$off('section-changed', this.fetchCategories)
       this.$eventBus.$off('podcast-subscription-changed', this.fetchCategories)
     }
   },

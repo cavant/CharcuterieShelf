@@ -114,10 +114,13 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
 - **On-Demand Checking & Release Notes**: Check for updates anytime from **Settings → App Updates**, read formatted changelogs, or tap the pulsing **Update Available** badge in `SideDrawer.vue`.
 - **Permission & Security**: Uses `REQUEST_INSTALL_PACKAGES` permission and secure `FileProvider` content URIs (`com.CharcuterieShelf.fileprovider`).
 
-### 2.7 Android Auto In-Car Dashboard Playback (Inherited Upstream Feature)
+### 2.7 Android Auto In-Car Dashboard Playback (Inherited Upstream Feature & Enhanced Stability)
 - **Inherited Upstream Capability**: MediaBrowserServiceCompat integration is inherited directly from upstream Audiobookshelf and works by default. Do not advertise or highlight Android Auto as a custom fork-exclusive differentiator in public readmes or feature lists.
 - **MediaBrowserServiceCompat Integration**: In-car dashboard playback, media browsing, and search support directly through Android Auto (`PlayerNotificationService.kt`).
 - **Driver Distraction & In-Car Screen Isolation**: Standard Android Auto media apps render via system templates from `MediaBrowserServiceCompat` and must NOT declare `distractionOptimized="true"` on `MainActivity` or `<application>` (which erroneously tells Android Auto to launch the phone activity on click). In `PlayerNotificationService.kt:onGetRoot()`, `mediaSession.setSessionActivity(null)` is set upon connection so Android Auto displays its native in-car Now Playing and media browser UI directly on the head unit instead of launching the phone activity. Phone notifications continue to use `sessionActivityPendingIntent` via `AbMediaDescriptionAdapter.kt`.
+- **Taskbar Media Widget & Last Played Session Restoration**: On service creation and Android Auto connection (`PlayerNotificationService.kt:restoreLastPlaybackSessionIfNeeded`), CharcuterieShelf restores the user's last played item into `mediaSession` in `STATE_PAUSED` with full metadata and duration. This immediately populates the Android Auto taskbar widget so drivers can resume playback with 1 tap.
+- **Now Playing Back/Home Navigation**: When navigating back from the Now Playing screen in Android Auto, root (`/`) presents a dedicated **Home** (`HOME_ROOT = "__HOME__"`) node featuring combined audiobooks and podcasts (Continue Listening, Recently Added, and Downloads).
+- **Crash Immunity & Scoped Storage FileProvider**: In `res/xml/file_paths.xml`, added `<external-path name="external" path="." />` to resolve `IllegalArgumentException` when FileProvider accesses downloaded media art in external storage. All episode browser loaders and cover art decoders (`LocalLibraryItem.kt`, `MediaManager.kt`, `PlayerNotificationService.kt`) are wrapped in safe try-catches and null guards to prevent binder crashes.
 - **Sideload vs Google Play Distribution**: Android Auto restricts sideloaded APKs while driving unless installed with Google Play source origin (`com.android.vending`) via AAEnabler (`malebuffy/AAEnabler`), KingInstaller (`fcaronte/KingInstaller`), ADB (`adb install -i "com.android.vending"`), or official Google Play Closed Testing track with "Unknown sources" toggled in Android Auto Developer Settings.
 - **Instant Root Menu & Background Refresh**: `onLoadChildren("/")` returns available/local items instantly to prevent Android Auto's 5-second binder timeout, followed by background synchronization and `notifyChildrenChanged("/")`.
 - **Universal Automotive Connection**: `isValid()` allows all connecting media browser clients across wireless adapters, head units, and Android Automotive OS.
@@ -139,15 +142,24 @@ CharcuterieShelf is a hybrid mobile client powered by **Nuxt.js (Vue 2)** embedd
   - **Match Tab**: Online provider search via Google Books, Audible, OpenLibrary.
   - **Cover Tab**: Camera/gallery upload, URL import, provider cover selection.
 
-### 2.11 Dedicated Audiobooks & Podcasts Medium Switcher
-- Two-cell top-level segmented toggle (`MediaSectionSwitcher.vue`) positioned below the Appbar.
-- Instantly switches active library between books and podcasts while preserving independent navigation states.
+### 2.11 3-Way Top-Level Segment Switcher (Home | Audiobooks | Podcasts)
+- Three-cell top-level segmented toggle (`MediaSectionSwitcher.vue`) positioned below the Appbar.
+- Defaults to **Home** (`home`), which simultaneously aggregates both audiobook and podcast shelves (Continue Listening, Recently Added, Recommendations, and Downloads) into a unified dashboard without forcing a switch to podcasts.
+- Preserves user preference in `$localStore` (`defaultHomeSection`) so restarting the app seamlessly restores the chosen view (Home, Audiobooks, or Podcasts).
 - Automated creation modal if no podcast library exists on the server.
 
 ### 2.12 Pocket Casts OPML Import & Device Storage Integrity
 - OPML / XML feed import modal (`OpmlImportModal.vue`) supporting Pocket Casts subscription exports.
 - Dual-mode input (file picker and text paste), feed preview, filter search, and batch creation on the server.
 - Device-first local download architecture ensures media files remain on device while syncing progress with the server.
+
+### 2.13 Pocket Casts Automation & New Episode Management
+- **Background Subscription Scanner (`plugins/podcastSubscriptionManager.js`)**: Periodically monitors subscribed podcasts for newly published episodes.
+- **Seed-First Protection**: On first run for each podcast, seeds existing episodes to `$localStore` (`known_episodes_${serverAddress}_${podcastId}`) without triggering notifications or bulk downloads.
+- **Device-Only Auto-Download**: Automatically downloads newly released episodes to local storage via `AbsDownloader` without affecting server storage.
+- **System Push Notifications**: Delivers native Android notifications for new episodes (`AbsAudioPlayer.kt:postEpisodeNotification()`) with channel `charcuterieshelf_episodes` and custom monochrome vector icon.
+- **Auto-Add to Queue (Up Next)**: Automatically adds new episodes to the playback queue with configurable insertion position (`next` or `last`).
+- **Global & Per-Podcast Controls**: Configurable globally in **Settings → Podcasts & Downloads** and individually per podcast in `PodcastSettingsModal.vue`.
 
 ---
 

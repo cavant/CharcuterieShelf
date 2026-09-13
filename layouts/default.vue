@@ -390,6 +390,9 @@ export default {
 
       this.loadSavedSettings()
 
+      const savedSection = await this.$localStore.getDefaultHomeSection()
+      this.$store.commit('libraries/setCurrentSection', savedSection)
+
       const deviceData = await this.$db.getDeviceData()
       this.$store.commit('setDeviceData', deviceData)
 

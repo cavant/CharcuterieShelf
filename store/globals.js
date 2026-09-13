@@ -14,10 +14,12 @@ export const state = () => ({
   localFolderSelectData: null,
   hapticFeedback: 'LIGHT',
   showRSSFeedOpenCloseModal: false,
-  rssFeedEntity: null
+  rssFeedEntity: null,
+  playbackQueue: []
 })
 
 export const getters = {
+  getPlaybackQueue: (state) => state.playbackQueue || [],
   getDownloadItem:
     (state) =>
     (libraryItemId, episodeId = null) => {
@@ -201,5 +203,22 @@ export const mutations = {
   setRSSFeedOpenCloseModal(state, entity) {
     state.rssFeedEntity = entity
     state.showRSSFeedOpenCloseModal = true
+  },
+  addToQueue(state, { item, episode, position = 'last' }) {
+    if (!state.playbackQueue) state.playbackQueue = []
+    const queueEntry = { item, episode, addedAt: Date.now() }
+    if (position === 'next') {
+      state.playbackQueue.unshift(queueEntry)
+    } else {
+      state.playbackQueue.push(queueEntry)
+    }
+  },
+  removeFromQueue(state, index) {
+    if (state.playbackQueue && index >= 0 && index < state.playbackQueue.length) {
+      state.playbackQueue.splice(index, 1)
+    }
+  },
+  clearQueue(state) {
+    state.playbackQueue = []
   }
 }

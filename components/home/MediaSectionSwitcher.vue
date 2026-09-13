@@ -1,28 +1,39 @@
 <template>
   <div class="w-full bg-bg px-3 py-1.5 border-b border-border/40 select-none z-20">
     <div class="w-full max-w-md mx-auto flex items-center bg-secondary/80 rounded-xl p-1 border border-border/60 shadow-inner">
+      <!-- Combined Home Segment Button -->
+      <button
+        type="button"
+        class="flex-1 py-1 px-2 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+        :class="currentSection === 'home' ? 'bg-primary text-fg shadow-sm border border-border/50' : 'text-fg-muted hover:text-fg'"
+        @click="selectSection('home')"
+      >
+        <span class="material-symbols text-base leading-none">home</span>
+        <span>{{ homeLabel }}</span>
+      </button>
+
       <!-- Audiobooks Segment Button -->
       <button
         type="button"
-        class="flex-1 py-1 px-3 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-        :class="!isPodcast ? 'bg-primary text-fg shadow-sm border border-border/50' : 'text-fg-muted hover:text-fg'"
+        class="flex-1 py-1 px-2 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+        :class="currentSection === 'book' ? 'bg-primary text-fg shadow-sm border border-border/50' : 'text-fg-muted hover:text-fg'"
         @click="selectSection('book')"
       >
         <span class="material-symbols text-base leading-none">auto_stories</span>
         <span>{{ audiobooksLabel }}</span>
-        <span v-if="!isPodcast && bookLibrariesCount > 1" class="material-symbols text-xs opacity-70 leading-none">arrow_drop_down</span>
+        <span v-if="currentSection === 'book' && bookLibrariesCount > 1" class="material-symbols text-xs opacity-70 leading-none">arrow_drop_down</span>
       </button>
 
       <!-- Podcasts Segment Button -->
       <button
         type="button"
-        class="flex-1 py-1 px-3 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
-        :class="isPodcast ? 'bg-primary text-fg shadow-sm border border-border/50' : 'text-fg-muted hover:text-fg'"
+        class="flex-1 py-1 px-2 flex items-center justify-center gap-1.5 rounded-lg text-xs font-semibold transition-all duration-200"
+        :class="currentSection === 'podcast' ? 'bg-primary text-fg shadow-sm border border-border/50' : 'text-fg-muted hover:text-fg'"
         @click="selectSection('podcast')"
       >
         <span class="material-symbols text-base leading-none">podcasts</span>
         <span>{{ podcastsLabel }}</span>
-        <span v-if="isPodcast && podcastLibrariesCount > 1" class="material-symbols text-xs opacity-70 leading-none">arrow_drop_down</span>
+        <span v-if="currentSection === 'podcast' && podcastLibrariesCount > 1" class="material-symbols text-xs opacity-70 leading-none">arrow_drop_down</span>
       </button>
     </div>
 
@@ -99,8 +110,14 @@ export default {
     }
   },
   computed: {
+    currentSection() {
+      return this.$store.getters['libraries/getCurrentSection'] || 'home'
+    },
     currentLibrary() {
       return this.$store.getters['libraries/getCurrentLibrary']
+    },
+    currentLibraryId() {
+      return this.$store.state.libraries.currentLibraryId
     },
     currentLibraryMediaType() {
       return this.$store.getters['libraries/getCurrentLibraryMediaType']
@@ -123,6 +140,9 @@ export default {
     podcastLibrariesCount() {
       return this.podcastLibraries.length
     },
+    homeLabel() {
+      return this.$strings.ButtonHome || 'Home'
+    },
     audiobooksLabel() {
       return this.$strings.HeaderAudiobooks || 'Audiobooks'
     },
@@ -134,39 +154,57 @@ export default {
     async selectSection(type) {
       await this.$hapticsImpact()
 
+      if (type === 'home') {
+        this.$store.commit('libraries/setCurrentSection', 'home')
+        await this.$localStore.setDefaultHomeSection('home')
+        this.$eventBus.$emit('section-changed', 'home')
+        if (this.$route.name !== 'bookshelf') {
+          this.$router.push('/bookshelf')
+        }
+        return
+      }
+
       if (type === 'book') {
-        if (!this.isPodcast) {
-          // Already on audiobooks. If multiple book libraries exist, open library modal
+        if (this.currentSection === 'book') {
           if (this.bookLibrariesCount > 1) {
             this.$store.commit('libraries/setShowModal', true)
           }
           return
         }
 
-        // Switch to audiobooks
-        const targetLib = this.bookLibraries[0]
+        this.$store.commit('libraries/setCurrentSection', 'book')
+        await this.$localStore.setDefaultHomeSection('book')
+        this.$eventBus.$emit('section-changed', 'book')
+
+        const targetLib = this.bookLibraries.find(l => l.id === this.currentLibraryId) || this.bookLibraries[0]
         if (targetLib) {
-          await this.$store.dispatch('libraries/fetch', targetLib.id)
-          this.$eventBus.$emit('library-changed', targetLib.id)
-          this.$localStore.setLastLibraryId(targetLib.id)
-          if (this.$route.name !== 'bookshelf') {
-            this.$router.push('/bookshelf')
+          if (targetLib.id !== this.currentLibraryId) {
+            await this.$store.dispatch('libraries/fetch', targetLib.id)
+            this.$eventBus.$emit('library-changed', targetLib.id)
           }
+          this.$localStore.setLastLibraryId(targetLib.id)
+        }
+        if (this.$route.name !== 'bookshelf') {
+          this.$router.push('/bookshelf')
         }
       } else if (type === 'podcast') {
-        if (this.isPodcast) {
-          // Already on podcasts. If multiple podcast libraries exist, open library modal
+        if (this.currentSection === 'podcast') {
           if (this.podcastLibrariesCount > 1) {
             this.$store.commit('libraries/setShowModal', true)
           }
           return
         }
 
-        // Switch to podcasts
-        const targetLib = this.podcastLibraries[0]
+        this.$store.commit('libraries/setCurrentSection', 'podcast')
+        await this.$localStore.setDefaultHomeSection('podcast')
+        this.$eventBus.$emit('section-changed', 'podcast')
+
+        const targetLib = this.podcastLibraries.find(l => l.id === this.currentLibraryId) || this.podcastLibraries[0]
         if (targetLib) {
-          await this.$store.dispatch('libraries/fetch', targetLib.id)
-          this.$eventBus.$emit('library-changed', targetLib.id)
+          if (targetLib.id !== this.currentLibraryId) {
+            await this.$store.dispatch('libraries/fetch', targetLib.id)
+            this.$eventBus.$emit('library-changed', targetLib.id)
+          }
           this.$localStore.setLastLibraryId(targetLib.id)
           if (this.$route.name !== 'bookshelf') {
             this.$router.push('/bookshelf')

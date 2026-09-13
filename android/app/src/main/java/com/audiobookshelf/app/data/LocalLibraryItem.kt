@@ -50,10 +50,19 @@ class LocalLibraryItem(
 
   @JsonIgnore
   fun getCoverUri(ctx:Context): Uri {
-    if (coverContentUrl?.startsWith("file:") == true) {
-      return FileProvider.getUriForFile(ctx, "${BuildConfig.APPLICATION_ID}.fileprovider", Uri.parse(coverContentUrl).toFile())
+    try {
+      if (coverContentUrl?.startsWith("file:") == true) {
+        val file = Uri.parse(coverContentUrl).toFile()
+        if (file.exists()) {
+          return FileProvider.getUriForFile(ctx, "${BuildConfig.APPLICATION_ID}.fileprovider", file)
+        }
+      } else if (!coverContentUrl.isNullOrEmpty()) {
+        return Uri.parse(coverContentUrl)
+      }
+    } catch (e: Exception) {
+      Log.w("LocalLibraryItem", "getCoverUri: Failed to resolve cover URI for $id: ${e.message}")
     }
-    return if (coverContentUrl != null) Uri.parse(coverContentUrl) else Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
+    return Uri.parse("android.resource://${BuildConfig.APPLICATION_ID}/" + R.drawable.icon)
   }
 
   @JsonIgnore
@@ -142,11 +151,16 @@ class LocalLibraryItem(
 
     var bitmap:Bitmap? = null
     if (coverContentUrl != null) {
-      bitmap = if (Build.VERSION.SDK_INT < 28) {
-        MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
-      } else {
-        val source: ImageDecoder.Source = ImageDecoder.createSource(ctx.contentResolver, coverUri)
-        ImageDecoder.decodeBitmap(source)
+      try {
+        bitmap = if (Build.VERSION.SDK_INT < 28) {
+          @Suppress("DEPRECATION")
+          MediaStore.Images.Media.getBitmap(ctx.contentResolver, coverUri)
+        } else {
+          val source: ImageDecoder.Source = ImageDecoder.createSource(ctx.contentResolver, coverUri)
+          ImageDecoder.decodeBitmap(source)
+        }
+      } catch (e: Exception) {
+        Log.w("LocalLibraryItem", "getMediaDescription: Failed to decode cover bitmap for $id: ${e.message}")
       }
     }
 
