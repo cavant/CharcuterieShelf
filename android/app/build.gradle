@@ -36,8 +36,8 @@ android {
     applicationId "com.CharcuterieShelf"
     minSdkVersion rootProject.ext.minSdkVersion
     targetSdkVersion rootProject.ext.targetSdkVersion
-    versionCode 136
-    versionName "0.14.16-beta"
+    versionCode 137
+    versionName "0.14.17-beta"
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     manifestPlaceholders = [
       "appAuthRedirectScheme": "com.CharcuterieShelf"
@@ -55,11 +55,15 @@ android {
         storePassword project.findProperty('RELEASE_STORE_PASSWORD') ?: 'charcuterieshelf'
         keyAlias project.findProperty('RELEASE_KEY_ALIAS') ?: 'charcuterieshelf'
         keyPassword project.findProperty('RELEASE_KEY_PASSWORD') ?: 'charcuterieshelf'
+        v1SigningEnabled true
+        v2SigningEnabled true
       } else if (file('release-key.jks').exists()) {
         storeFile file('release-key.jks')
         storePassword 'charcuterieshelf'
         keyAlias 'charcuterieshelf'
         keyPassword 'charcuterieshelf'
+        v1SigningEnabled true
+        v2SigningEnabled true
       }
     }
   }
