@@ -1,6 +1,8 @@
 import Vue from 'vue'
 import { AbsAppUpdater } from '@/plugins/capacitor'
 import { Browser } from '@capacitor/browser'
+import { App } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
 import pkg from '@/package.json'
 
 import { parseSemver, isNewerVersion } from '@/utils/semverUtils'
@@ -16,6 +18,22 @@ export default (context, inject) => {
     isDownloading: false,
     downloadError: null
   })
+
+  const syncNativeVersion = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const info = await App.getInfo()
+        if (info?.version) {
+          state.currentVersion = info.version
+          if ($config) $config.version = info.version
+          if (app?.$config) app.$config.version = info.version
+        }
+      } catch (err) {
+        console.warn('[AppUpdater] Failed to query native version', err)
+      }
+    }
+  }
+  syncNativeVersion()
 
   let progressListener = null
 
@@ -51,6 +69,7 @@ export default (context, inject) => {
       state.downloadError = null
 
       try {
+        await syncNativeVersion()
         console.log('[AppUpdater] Checking for updates from GitHub (Current:', state.currentVersion, ')...')
         const response = await fetch('https://api.github.com/repos/cavant/CharcuterieShelf/releases', {
           headers: {

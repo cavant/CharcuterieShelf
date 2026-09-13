@@ -50,7 +50,7 @@
 
         <div class="flex items-center">
           <div class="flex items-center space-x-1.5" :class="updateAvailable ? 'cursor-pointer' : ''" @click="updateAvailable ? openAppUpdateModal() : null">
-            <p class="text-2xs font-semibold text-fg-muted">CharcuterieShelf v{{ $config.version }}</p>
+            <p class="text-2xs font-semibold text-fg-muted">CharcuterieShelf v{{ currentAppVersion }}</p>
             <span v-if="updateAvailable" class="flex h-2 w-2 relative">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
@@ -122,6 +122,9 @@ export default {
     },
     latestRelease() {
       return this.$appUpdater?.latestRelease || null
+    },
+    currentAppVersion() {
+      return this.$appUpdater?.currentVersion || this.$config?.version || ''
     },
     navItems() {
       var items = [

@@ -254,7 +254,7 @@
           <span class="material-symbols text-accent text-2xl">system_update</span>
           <div>
             <h3 class="text-sm font-bold text-fg leading-tight">CharcuterieShelf Updates</h3>
-            <p class="text-xs text-fg-muted">Installed: <span class="font-mono text-fg font-semibold">v{{ $config.version }}</span></p>
+            <p class="text-xs text-fg-muted">Installed: <span class="font-mono text-fg font-semibold">v{{ currentAppVersion }}</span></p>
           </div>
         </div>
         <span v-if="updateAvailable" class="px-2 py-0.5 rounded-full text-2xs font-extrabold bg-accent text-black animate-pulse">
@@ -590,6 +590,9 @@ export default {
     isCheckingUpdates() {
       return this.$appUpdater?.isChecking || false
     },
+    currentAppVersion() {
+      return this.$appUpdater?.currentVersion || this.$config?.version || '0.14.14-beta'
+    },
     // This is flipped because alt view was the default until v0.9.61-beta
     enableBookshelfView: {
       get() {
@@ -759,7 +762,7 @@ export default {
       } else if (res?.error) {
         this.$toast.error('Update check failed: ' + res.error)
       } else {
-        this.$toast.success('CharcuterieShelf is up to date (v' + this.$config.version + ')')
+        this.$toast.success('CharcuterieShelf is up to date (v' + this.currentAppVersion + ')')
       }
     },
     openAppUpdateModal() {
