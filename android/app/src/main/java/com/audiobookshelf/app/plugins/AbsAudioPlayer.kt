@@ -160,23 +160,41 @@ class AbsAudioPlayer : Plugin() {
   }
 
   override fun handleOnPause() {
-    super.handleOnPause()
+    try {
+      super.handleOnPause()
+    } catch (t: Throwable) {
+      Log.w(tag, "Error in super.handleOnPause: ${t.message}")
+    }
     isInForeground = false
   }
 
   override fun handleOnResume() {
-    super.handleOnResume()
+    try {
+      super.handleOnResume()
+    } catch (t: Throwable) {
+      Log.w(tag, "Error in super.handleOnResume: ${t.message}")
+    }
     isInForeground = true
 
     // Send current state to UI after resume to sync up (with small delay to let WebView fully resume)
-    if (::playerNotificationService.isInitialized && playerNotificationService.currentPlaybackSession != null) {
-      Handler(Looper.getMainLooper()).postDelayed({
-        playerNotificationService.sendClientMetadata(PlayerState.READY)
-        playerNotificationService.sleepTimerManager.sendCurrentSleepTimerState()
-        playerNotificationService.mediaProgressSyncer.currentLocalMediaProgress?.let {
-          playerNotificationService.clientEventEmitter?.onLocalMediaProgressUpdate(it)
-        }
-      }, 100)
+    try {
+      if (::playerNotificationService.isInitialized && !PlayerNotificationService.isClosed && playerNotificationService.currentPlaybackSession != null) {
+        Handler(Looper.getMainLooper()).postDelayed({
+          try {
+            if (::playerNotificationService.isInitialized && !PlayerNotificationService.isClosed && playerNotificationService.currentPlaybackSession != null) {
+              playerNotificationService.sendClientMetadata(PlayerState.READY)
+              playerNotificationService.sleepTimerManager.sendCurrentSleepTimerState()
+              playerNotificationService.mediaProgressSyncer.currentLocalMediaProgress?.let {
+                playerNotificationService.clientEventEmitter?.onLocalMediaProgressUpdate(it)
+              }
+            }
+          } catch (t: Throwable) {
+            Log.e(tag, "Error in handleOnResume postDelayed callback: ${t.message}", t)
+          }
+        }, 100)
+      }
+    } catch (t: Throwable) {
+      Log.e(tag, "Error in handleOnResume: ${t.message}", t)
     }
   }
 

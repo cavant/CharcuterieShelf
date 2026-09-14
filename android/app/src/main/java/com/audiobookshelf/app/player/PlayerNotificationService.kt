@@ -320,7 +320,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
     mediaSessionConnector.setMediaMetadataProvider { _ ->
       try {
         currentPlaybackSession?.getMediaMetadataCompat(ctx)
-          ?: DeviceManager.deviceData.lastPlaybackSession?.getMediaMetadataCompat(ctx)
           ?: MediaMetadataCompat.Builder().build()
       } catch (t: Throwable) {
         MediaMetadataCompat.Builder().build()
@@ -407,44 +406,7 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun restoreLastPlaybackSessionIfNeeded() {
-    if (currentPlaybackSession != null) return
-    try {
-      val lastSession = DeviceManager.deviceData.lastPlaybackSession ?: return
-      AbsLogger.info(tag, "restoreLastPlaybackSessionIfNeeded: Restoring last session ${lastSession.displayTitle} (${lastSession.id})")
-      val metadata = lastSession.getMediaMetadataCompat(ctx)
-      mediaSession.setMetadata(metadata)
-
-      val actions = PlaybackStateCompat.ACTION_PLAY or
-              PlaybackStateCompat.ACTION_PAUSE or
-              PlaybackStateCompat.ACTION_PLAY_PAUSE or
-              PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
-              PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS or
-              PlaybackStateCompat.ACTION_FAST_FORWARD or
-              PlaybackStateCompat.ACTION_REWIND or
-              PlaybackStateCompat.ACTION_SEEK_TO
-
-      val positionMs = (lastSession.currentTime * 1000.0).toLong()
-      val playbackState = PlaybackStateCompat.Builder()
-              .setActions(actions)
-              .setState(PlaybackStateCompat.STATE_PAUSED, positionMs, 1f)
-              .build()
-
-      mediaSession.setPlaybackState(playbackState)
-      mediaSession.isActive = true
-
-      // Resolve cover bitmap asynchronously if not yet resolved
-      lastSession.resolveCoverBitmapAsync(ctx, metadataScope) {
-        try {
-          if (currentPlaybackSession == null) {
-            mediaSession.setMetadata(lastSession.getMediaMetadataCompat(ctx))
-          }
-        } catch (t: Throwable) {
-          AbsLogger.error(tag, "restoreLastPlaybackSessionIfNeeded art resolved callback error: ${t.message}")
-        }
-      }
-    } catch (t: Throwable) {
-      AbsLogger.error(tag, "restoreLastPlaybackSessionIfNeeded: Failed: ${t.message}")
-    }
+    // Intentionally no-op: prevents injecting inactive playback state into MediaSessionCompat before player is prepared
   }
 
   private fun initializeMPlayer() {
@@ -1117,27 +1079,16 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun play() {
-    if (currentPlayer.isPlaying) {
-      Log.d(tag, "Already playing")
-      return
-    }
-    if (currentPlaybackSession == null && DeviceManager.deviceData.lastPlaybackSession != null) {
-      try {
-        val lastSession = DeviceManager.deviceData.lastPlaybackSession!!
-        AbsLogger.info(tag, "play: Resuming last playback session: ${lastSession.displayTitle}")
-        val connectionConfig = DeviceManager.deviceData.serverConnectionConfigs.find { it.id == lastSession.serverConnectionConfigId }
-        connectionConfig?.let {
-          DeviceManager.serverConnectionConfig = it
-        }
-        val playbackRate = mediaManager.getSavedPlaybackRate()
-        preparePlayer(lastSession, true, playbackRate)
+    try {
+      if (currentPlayer.isPlaying) {
+        Log.d(tag, "Already playing")
         return
-      } catch (t: Throwable) {
-        AbsLogger.error(tag, "play: Failed to resume last playback session: ${t.message}")
       }
+      currentPlayer.volume = 1F
+      currentPlayer.play()
+    } catch (t: Throwable) {
+      AbsLogger.error(tag, "play error: ${t.message}")
     }
-    currentPlayer.volume = 1F
-    currentPlayer.play()
   }
 
   fun pause() {
@@ -1267,27 +1218,36 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
   }
 
   fun sendClientMetadata(playerState: PlayerState) {
-    val session = currentPlaybackSession
-    if (session != null) {
-      val exoDuration = currentPlayer?.duration ?: -1L
-      if (exoDuration > 0L) {
-        val exoDurationSec = exoDuration / 1000.0
-        var updated = false
-        if (session.duration <= 0.0) {
-          session.duration = exoDurationSec
-          updated = true
-        }
-        if (session.audioTracks.isNotEmpty() && session.audioTracks[0].duration <= 0.0) {
-          session.audioTracks[0].duration = exoDurationSec
-          updated = true
-        }
-        if (updated) {
-          mediaSessionConnector.invalidateMediaSessionMetadata()
+    try {
+      val session = currentPlaybackSession
+      if (session != null) {
+        val exoDuration = try { currentPlayer?.duration ?: -1L } catch (t: Throwable) { -1L }
+        if (exoDuration > 0L) {
+          val exoDurationSec = exoDuration / 1000.0
+          var updated = false
+          if (session.duration <= 0.0) {
+            session.duration = exoDurationSec
+            updated = true
+          }
+          if (session.audioTracks.isNotEmpty() && session.audioTracks[0].duration <= 0.0) {
+            session.audioTracks[0].duration = exoDurationSec
+            updated = true
+          }
+          if (updated) {
+            try {
+              mediaSessionConnector.invalidateMediaSessionMetadata()
+            } catch (t: Throwable) {
+              AbsLogger.error(tag, "Failed to invalidateMediaSessionMetadata: ${t.message}")
+            }
+          }
         }
       }
+      val duration = currentPlaybackSession?.getTotalDuration() ?: 0.0
+      val currentTime = try { getCurrentTimeSeconds() } catch (t: Throwable) { 0.0 }
+      clientEventEmitter?.onMetadata(PlaybackMetadata(duration, currentTime, playerState))
+    } catch (t: Throwable) {
+      AbsLogger.error(tag, "sendClientMetadata error: ${t.message}")
     }
-    val duration = currentPlaybackSession?.getTotalDuration() ?: 0.0
-    clientEventEmitter?.onMetadata(PlaybackMetadata(duration, getCurrentTimeSeconds(), playerState))
   }
 
   fun getMediaPlayer(): String {
@@ -1413,8 +1373,6 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
       // sessionActivity is intentionally never set in onCreate(), but null it explicitly as a safety net.
       mediaSession.setSessionActivity(null)
 
-      // Restore last played session so Android Auto taskbar widget displays it immediately
-      restoreLastPlaybackSessionIfNeeded()
 
       val extras = Bundle()
       extras.putBoolean(MediaConstants.BROWSER_SERVICE_EXTRAS_KEY_SEARCH_SUPPORTED, true)

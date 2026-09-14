@@ -663,3 +663,47 @@ All GitHub Actions pipelines achieved 100% green status on commit `727a6b2`:
 - **Cloud Distribution Sync**: Successfully copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
 - **GitHub Release Live**: Published `v0.14.15-beta` with release APK.
 
+---
+
+## 16. Dual V1/V2 Signing & Stable Android 15 Target (v0.14.17-beta)
+- Enabled both JAR (v1) and APK Signature Scheme (v2) in `android/app/build.gradle`.
+- Aligned target SDK to stable Android 15 (API 35).
+- Made `MainActivity.pluginCallback` nullable and wrapped service connection invocation in defensive try-catch.
+
+---
+
+## 17. Background Sleep & Resume Lifecycle Crash Elimination (v0.14.18-beta)
+
+### Root Cause Analysis
+- **Premature `MediaSessionCompat` Restoration Collision**: When Android put the app to sleep or awakened the process, Android system media frameworks, Bluetooth AVRCP, or Android Auto daemon connected to `MediaBrowserServiceCompat.onGetRoot()`. This was calling `restoreLastPlaybackSessionIfNeeded()`, setting `mediaSession.isActive = true` with `STATE_PAUSED` and total duration while ExoPlayer was completely idle (`mediaItemCount == 0`, `currentPlaybackSession == null`).
+- **Foreground Service Start Exception in Background**: When SystemUI or Bluetooth queried or triggered playback on the "active" session, `play()` invoked `preparePlayer()` on the stale session, calling `ContextCompat.startForegroundService()` from the background. On Android 12–15 (API 31–35), this immediately threw `ForegroundServiceStartNotAllowedException`, terminating the app process.
+- **Unguarded Resume Handler Dispatches**: In `AbsAudioPlayer.kt:handleOnResume()`, a 100ms delayed Handler post on the Main looper executed without try-catch or lifecycle null guards, attempting to push metadata when player services were uninitialized or closed.
+- **Leaked ServiceConnection on Activity Destruction**: `MainActivity.onDestroy()` failed to unbind `mConnection`, leading to binding conflicts on activity recreation.
+
+### Key Architectural Fixes
+1. **Permanently Neutralized Premature Session Injection**:
+   - Removed `restoreLastPlaybackSessionIfNeeded()` from `PlayerNotificationService.kt:onGetRoot()`.
+   - Replaced `restoreLastPlaybackSessionIfNeeded()` with a safe no-op to ensure MediaSession is only activated upon explicit user playback initiation.
+   - Removed the stale `DeviceManager.deviceData.lastPlaybackSession` fallback from `mediaSessionConnector.setMediaMetadataProvider`.
+2. **Reverted and Guarded `play()`**:
+   - Removed the `lastPlaybackSession` auto-resume branch from `PlayerNotificationService.kt:play()`. Playback only operates on active players.
+   - Wrapped `play()` in a defensive `try-catch (t: Throwable)`.
+3. **Hardened Metadata Dispatch**:
+   - Wrapped `PlayerNotificationService.kt:sendClientMetadata()` in a defensive `try-catch (t: Throwable)` with safe fallbacks for `currentPlayer.duration` and `getCurrentTimeSeconds()`.
+4. **Lifecycle-Safe Resume & Pause**:
+   - In `AbsAudioPlayer.kt`: Added try-catches and checked `::playerNotificationService.isInitialized && !PlayerNotificationService.isClosed && playerNotificationService.currentPlaybackSession != null` before dispatching state sync.
+5. **Clean Service Unbinding**:
+   - In `MainActivity.kt:onDestroy()`, safely unbound `mConnection` when `mBounded` is true.
+6. **Defensive Widget Updaters**:
+   - In `MediaPlayerWidget.kt`, wrapped `onEnabled()` and `updateAppWidget()` in defensive `try-catch (t: Throwable)`.
+7. **Version Bump (`v0.14.18-beta`, versionCode 138)**:
+   - Incremented `versionCode` to 138 and `versionName` to `0.14.18-beta` in `package.json` and `android/app/build.gradle`.
+
+### Verification Results
+- **Automated QA Harness (`npm run test:qa`)**: All 12 test suites passed 100%.
+- **Nuxt Static Generation (`npm run generate`)**: Succeeded cleanly (100% routes generated).
+- **Capacitor Sync (`npx cap sync`)**: Synchronized web bundle into Android native assets in 1.93s.
+- **Native Android Compilation (`assembleRelease bundleRelease`)**: Succeeded cleanly with JDK 21 in 1m 0s.
+- **Cloud Distribution Sync**: Successfully copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
+
+
