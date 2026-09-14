@@ -202,7 +202,18 @@ export default {
       await AbsLogger.info({ tag: 'AudioPlayerContainer', message: `playLibraryItem: Received play request for library item ${payload.libraryItemId} ${payload.episodeId ? `episode ${payload.episodeId}` : ''}` })
       const libraryItemId = payload.libraryItemId
       const episodeId = payload.episodeId
-      const startTime = payload.startTime
+      let startTime = payload.startTime
+      if (startTime === undefined || startTime === null) {
+        const userProg = this.$store.getters['user/getUserMediaProgress'](libraryItemId, episodeId)
+        if (userProg && !userProg.isFinished && userProg.currentTime > 0) {
+          startTime = userProg.currentTime
+        } else {
+          const localProg = this.$store.getters['globals/getLocalMediaProgressByServerItemId'](libraryItemId, episodeId)
+          if (localProg && !localProg.isFinished && localProg.currentTime > 0) {
+            startTime = localProg.currentTime
+          }
+        }
+      }
       const startWhenReady = !payload.paused
 
       const isLocal = libraryItemId.startsWith('local')

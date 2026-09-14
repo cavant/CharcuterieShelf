@@ -9,6 +9,14 @@
 
     <div v-show="!entities.length && initialized" class="w-full py-16 text-center text-xl">
       <div v-if="page === 'collections'" class="py-4">{{ $strings.MessageNoCollections }}</div>
+      <div v-else-if="currentLibraryMediaType === 'podcast'" class="py-4 flex flex-col items-center">
+        <p class="text-base text-fg font-semibold mb-1">No Subscribed Podcasts</p>
+        <p class="text-xs text-fg-muted max-w-xs mb-4">You haven't subscribed to any shows on this server yet.</p>
+        <div class="flex items-center gap-2">
+          <ui-btn small color="primary" @click="$eventBus.$emit('open-opml-modal')">Import OPML</ui-btn>
+          <ui-btn v-if="userIsAdminOrUp" small color="accent" @click="$router.push('/bookshelf/add-podcast')">Add Podcast</ui-btn>
+        </div>
+      </div>
       <div v-else class="py-4 capitalize">No {{ entityName }}</div>
       <ui-btn v-if="hasFilter" @click="clearFilter">{{ $strings.ButtonClearFilter }}</ui-btn>
     </div>
@@ -159,6 +167,9 @@ export default {
     sizeMultiplier() {
       const baseSize = this.isCoverSquareAspectRatio ? 192 : 120
       return this.entityWidth / baseSize
+    },
+    userIsAdminOrUp() {
+      return this.$store.getters['user/getIsAdminOrUp']
     }
   },
   methods: {
@@ -201,6 +212,9 @@ export default {
         if (isPodcastLibrary && this.user?.id) {
           const serverAddress = this.$store.getters['user/getServerAddress']
           let subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, serverAddress)
+          if ((subs === null || !subs.length) && this.user) {
+            subs = await this.$localStore.syncUserSubscriptionsFromServer(this.user.id, serverAddress, this.user, this.$nativeHttp)
+          }
           if (subs === null) {
             subs = []
             await this.$localStore.setUserPodcastSubscriptions(this.user.id, serverAddress, subs)

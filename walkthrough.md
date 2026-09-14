@@ -706,4 +706,49 @@ All GitHub Actions pipelines achieved 100% green status on commit `727a6b2`:
 - **Native Android Compilation (`assembleRelease bundleRelease`)**: Succeeded cleanly with JDK 21 in 1m 0s.
 - **Cloud Distribution Sync**: Successfully copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
 
+---
+
+## 18. Direct Stream Podcast Progress Sync & Per-User Siloing Restoration (v0.14.19-beta)
+
+### Root Cause Analysis
+1. **Direct Stream Listening History Loss**:
+   - For podcast episodes streamed directly over RSS/HTTP (`playMethod == PLAYMETHOD_DIRECTSTREAM`), `MediaProgressSyncer.kt` only checked `currentIsLocal` (`session.isLocal == true`).
+   - Because `session.isLocal` was `false` for direct streams, the syncer attempted `sendProgressSync` (`POST /api/session/:id/sync`) using a synthetic session ID (`local-...`), which returned a 404 error from the server.
+   - Crucially, `saveLocalProgress(it)` and `apiHandler.sendLocalProgressSync(it)` (`POST /api/session/local`) were completely skipped! No progress was saved to the local SQLite database or synced to the Audiobookshelf server.
+   - Furthermore, `handlePlaybackEnded()` in `PlayerNotificationService.kt` only invoked `mediaProgressSyncer.finished` for Android Auto sessions, meaning standard playback never marked finished directly on the syncer.
+   - In `AbsAudioPlayer.kt:prepareLibraryItem` and `AudioPlayerContainer.vue:playLibraryItem`, when a direct-stream episode was launched without an explicit `startTime`, it defaulted to 0:00 rather than querying the saved `mediaProgress`.
+2. **Podcast Siloing & Subscription Reinstall Leak**:
+   - In `pages/item/_id/index.vue`, `checkSubscriptionStatus()` evaluated `if (subs === null) this.isSubscribed = true`, causing every user on the device to automatically appear subscribed to every show.
+   - In `pages/bookshelf/index.vue`, category entities for episodes were evaluated with `entity.id || entity.libraryItemId`, which resolved to the episode ID rather than the parent podcast ID, causing episode shelves to misfire against the user's subscription list.
+   - When users reinstalled or switched devices, local device preferences were wiped, leaving subscriptions empty. Without a server-backed sync mechanism, users lost their subscription list.
+
+### Key Architectural Fixes
+1. **Direct Stream Media Progress Persistence & Synchronization (`MediaProgressSyncer.kt`)**:
+   - Added `isDirectStream` (`playMethod == PLAYMETHOD_DIRECTSTREAM`) to `PlaybackSession.kt` and fixed `localMediaProgressId = "$libraryItemId-$episodeId"`.
+   - Updated `currentIsLocal` to `isLocal == true || isDirectStream == true`. Direct stream sessions now save progress to local SQLite (`saveLocalProgress`) and sync to the server via `POST /api/session/local` (`sendLocalProgressSync`).
+   - Enhanced `isConnectedToSameServer` to check matching `serverAddress` alongside connection IDs.
+2. **Playback Completion & Finished State Synchronization**:
+   - In `PlayerNotificationService.kt:handlePlaybackEnded()`, ensured `mediaProgressSyncer.finished` is dispatched for all completed playback sessions.
+   - In `EpisodeRow.vue` and `LatestEpisodeRow.vue`, updated `toggleFinished` to send `PATCH /api/me/progress/:libraryItemId/:episodeId` even when local media is present, keeping the server in sync with device actions.
+3. **Automatic Progress Resume on Playback**:
+   - In `AbsAudioPlayer.kt:prepareLibraryItem()`, when `streamUrl` is present and `startTimeOverride` is null, looks up saved progress in `DbManager.getLocalMediaProgress("$libraryItemId-$episodeId")` and resumes playback from `savedProg.currentTime`.
+   - In `AudioPlayerContainer.vue:playLibraryItem()`, looks up saved progress from `user/getUserMediaProgress` (server) or `globals/getLocalMediaProgressByServerItemId` (local) before dispatching playback.
+4. **Per-User Subscription Siloing & Server Persistence (`localStore.js`)**:
+   - Implemented `syncUserSubscriptionsFromServer(userId, serverAddress, user, nativeHttp)`: recovers subscriptions on fresh logins/reinstalls from server bookmarks (`title: 'cs_subscription'`) and `user.mediaProgress`.
+   - Added `addUserPodcastSubscription` and `removeUserPodcastSubscription` bookmark sync via `POST/DELETE /api/me/item/:id/bookmark` so subscriptions persist across uninstalls and multi-device logins.
+   - In `pages/item/_id/index.vue`, changed subscription fallback to `false` and synchronized bookmark creation/deletion on subscription toggle.
+   - In `pages/bookshelf/index.vue` and `components/bookshelf/LazyBookshelf.vue`, resolved podcast ID properly for episodes (`cat.type === 'episode' ? entity.libraryItemId : entity.id`) and calls `syncUserSubscriptionsFromServer` if subscriptions are empty.
+   - In `pages/bookshelf/favorites.vue`, added a toggle "Show subscribed podcasts only" in the Manage Favorites modal and ensured subscriptions are recovered on load.
+5. **Version Bump (`v0.14.19-beta`, versionCode 139)**:
+   - Incremented `versionCode` to 139 and `versionName` to `0.14.19-beta` in `package.json` and `android/app/build.gradle`.
+
+### Verification Results
+- **Automated QA Harness (`npm run test:qa`)**: All 12 test suites passed 100%.
+- **Favorites Store Unit Tests (`node tests/unit/favorites-store.test.mjs`)**: All 7 tests passed (100%).
+- **Nuxt Static Generation (`npm run generate`)**: Succeeded cleanly (100% routes generated).
+- **Capacitor Sync (`npx cap sync`)**: Synchronized web bundle into Android native assets in 1.85s.
+- **Native Android Compilation (`assembleRelease bundleRelease`)**: Succeeded cleanly with JDK 21 in 1m 39s.
+- **Cloud Distribution Sync**: Successfully copied to `E:\Google Drive\` and `C:\Users\Connor\OneDrive\`.
+
+
 

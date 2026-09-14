@@ -44,7 +44,7 @@ class MediaProgressSyncer(
   private val currentDisplayTitle
     get() = currentPlaybackSession?.displayTitle ?: "Unset"
   val currentIsLocal
-    get() = currentPlaybackSession?.isLocal == true
+    get() = currentPlaybackSession?.isLocal == true || currentPlaybackSession?.isDirectStream == true
   val currentSessionId
     get() = currentPlaybackSession?.id ?: ""
   private val currentPlaybackDuration
@@ -266,8 +266,8 @@ class MediaProgressSyncer(
 
         // Local library item is linked to a server library item
         // Send sync to server also if connected to this server and local item belongs to this
-        // server
-        val isConnectedToSameServer = it.serverConnectionConfigId != null && DeviceManager.serverConnectionConfig?.id == it.serverConnectionConfigId
+        val isConnectedToSameServer = (it.serverConnectionConfigId != null && DeviceManager.serverConnectionConfig?.id == it.serverConnectionConfigId) ||
+                (DeviceManager.isConnectedToServer && !DeviceManager.serverAddress.isNullOrEmpty() && (it.serverAddress.isNullOrEmpty() || it.serverAddress == DeviceManager.serverAddress))
         if (hasNetworkConnection &&
                         shouldSyncServer &&
                         !it.libraryItemId.isNullOrEmpty() &&

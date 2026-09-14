@@ -773,12 +773,11 @@ class PlayerNotificationService : MediaBrowserServiceCompat() {
         deletePlayedPodcastDownload(session)
       }
     }
-    if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
-      Log.d(tag, "Podcast playback ended on android auto")
-      val libraryItem = currentPlaybackSession?.libraryItem ?: return
+    mediaProgressSyncer.finished {
+      if (isAndroidAuto && currentPlaybackSession?.isPodcastEpisode == true) {
+        Log.d(tag, "Podcast playback ended on android auto")
+        val libraryItem = currentPlaybackSession?.libraryItem ?: return@finished
 
-      // Need to sync with server to set as finished
-      mediaProgressSyncer.finished {
         // Need to reload media progress
         mediaManager.loadServerUserMediaProgress {
           val podcast = libraryItem.media as Podcast

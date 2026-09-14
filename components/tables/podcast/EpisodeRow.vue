@@ -427,13 +427,18 @@ export default {
             this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
           }
         }
+        if (this.libraryItemId && this.effectiveEpisodeId && !this.isLocal) {
+          this.$nativeHttp
+            .patch(`/api/me/progress/${this.libraryItemId}/${this.effectiveEpisodeId}`, { isFinished })
+            .catch((e) => console.error('Failed to sync progress to server', e))
+        }
         this.isProcessingReadUpdate = false
-      } else if (this.episode?.id) {
+      } else if (this.effectiveEpisodeId) {
         const updatePayload = {
           isFinished: !this.userIsFinished
         }
         this.$nativeHttp
-          .patch(`/api/me/progress/${this.libraryItemId}/${this.episode.id}`, updatePayload)
+          .patch(`/api/me/progress/${this.libraryItemId}/${this.effectiveEpisodeId}`, updatePayload)
           .catch((error) => {
             console.error('Failed', error)
             this.$toast.error(`Failed to mark as ${updatePayload.isFinished ? 'Finished' : 'Not Finished'}`)

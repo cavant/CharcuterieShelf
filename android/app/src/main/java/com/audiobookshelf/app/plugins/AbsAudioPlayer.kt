@@ -291,6 +291,16 @@ class AbsAudioPlayer : Plugin() {
       )
       val sessionId = if (episodeId.isNotEmpty()) "${libraryItemId}-${episodeId}" else DeviceManager.getBase64Id(streamUrl)
       val pMeta = PodcastMetadata(title, author, null, mutableListOf(), false)
+      val initialStartTime: Double = startTimeOverride ?: run {
+        val progressId = if (episodeId.isNotEmpty()) "${libraryItemId}-${episodeId}" else libraryItemId
+        val savedProg = DeviceManager.dbManager.getLocalMediaProgress(progressId)
+        if (savedProg != null && !savedProg.isFinished && savedProg.currentTime > 0) {
+          Log.d(tag, "prepareLibraryItem: Resuming direct stream at saved time ${savedProg.currentTime}")
+          savedProg.currentTime
+        } else {
+          0.0
+        }
+      }
       val session = PlaybackSession(
         sessionId,
         DeviceManager.serverUserId,
@@ -309,7 +319,7 @@ class AbsAudioPlayer : Plugin() {
         System.currentTimeMillis(),
         0L,
         mutableListOf(audioTrack),
-        startTimeOverride ?: 0.0,
+        initialStartTime,
         null,
         null,
         null,

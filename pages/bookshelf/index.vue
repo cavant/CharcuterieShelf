@@ -246,8 +246,13 @@ export default {
       if (isConnectedToServerWithInternet) {
         let rawCategories = []
         let subs = null
-        if (this.user?.id && this.$store.getters['user/getServerAddress']) {
-          subs = (await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.$store.getters['user/getServerAddress'])) || []
+        const serverAddress = this.$store.getters['user/getServerAddress']
+        if (this.user?.id && serverAddress) {
+          subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, serverAddress)
+          if ((subs === null || !subs.length) && this.user) {
+            subs = await this.$localStore.syncUserSubscriptionsFromServer(this.user.id, serverAddress, this.user, this.$nativeHttp)
+          }
+          if (!subs) subs = []
         }
 
         if (this.currentSection === 'home') {
@@ -304,10 +309,10 @@ export default {
               })
 
               // Filter by user subscriptions if podcast
-              if ((cat.type === 'podcast' || cat.type === 'episode') && subs && Array.isArray(subs)) {
+              if ((cat.type === 'podcast' || cat.type === 'episode') && Array.isArray(subs)) {
                 cat.entities = cat.entities.filter((entity) => {
-                  const id = entity.id || entity.libraryItemId
-                  return subs.includes(id)
+                  const podcastId = (cat.type === 'episode' ? entity.libraryItemId : entity.id) || entity.libraryItemId || entity.id
+                  return subs.includes(podcastId)
                 })
               }
             }

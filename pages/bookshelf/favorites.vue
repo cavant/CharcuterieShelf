@@ -238,16 +238,20 @@
           </button>
         </div>
 
-        <!-- Modal Search -->
+        <!-- Modal Search & Filter -->
         <div class="p-3 border-b border-border/50 bg-secondary/50 flex-shrink-0">
           <div class="relative">
             <span class="material-symbols absolute left-2.5 top-1/2 -translate-y-1/2 text-fg-muted text-base">search</span>
             <input
               v-model="modalSearchQuery"
               type="text"
-              placeholder="Search all podcasts..."
+              placeholder="Search podcasts..."
               class="w-full bg-primary border border-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
             />
+          </div>
+          <div v-if="subscribedPodcastIds.length" class="flex items-center justify-between mt-2.5 pt-2 border-t border-border/40">
+            <span class="text-xxs text-fg-muted">Show subscribed podcasts only ({{ subscribedPodcastIds.length }})</span>
+            <ui-toggle-switch v-model="onlyShowSubscribedInModal" />
           </div>
         </div>
 
@@ -313,6 +317,7 @@ export default {
       searchQuery: '',
       showAddModal: false,
       modalSearchQuery: '',
+      onlyShowSubscribedInModal: true,
       allLibraryPodcasts: [],
       favoriteItems: [],
       favoriteIds: [],
@@ -355,10 +360,17 @@ export default {
     displayedItems() {
       return this.filteredItems
     },
+    modalCandidatePodcasts() {
+      if (this.onlyShowSubscribedInModal && this.subscribedPodcastIds.length) {
+        return this.allLibraryPodcasts.filter((item) => this.subscribedPodcastIds.includes(item.id))
+      }
+      return this.allLibraryPodcasts
+    },
     filteredAllPodcasts() {
-      if (!this.modalSearchQuery.trim()) return this.allLibraryPodcasts
+      const candidates = this.modalCandidatePodcasts
+      if (!this.modalSearchQuery.trim()) return candidates
       const q = this.modalSearchQuery.trim().toLowerCase()
-      return this.allLibraryPodcasts.filter((item) => {
+      return candidates.filter((item) => {
         const title = this.getItemTitle(item).toLowerCase()
         const author = this.getItemAuthor(item).toLowerCase()
         return title.includes(q) || author.includes(q)
@@ -517,8 +529,11 @@ export default {
         this.favoriteIds = savedIds
 
         // Load subscriptions to facilitate seeding
-        const subs = (await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.serverAddress)) || []
-        this.subscribedPodcastIds = subs
+        let subs = (await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.serverAddress)) || []
+        if ((!subs || !subs.length) && this.user) {
+          subs = await this.$localStore.syncUserSubscriptionsFromServer(this.user.id, this.serverAddress, this.user, this.$nativeHttp)
+        }
+        this.subscribedPodcastIds = subs || []
 
         // Reconstruct items in the saved custom order
         const ordered = []

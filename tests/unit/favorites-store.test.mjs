@@ -153,4 +153,32 @@ describe('Podcast Favorites & Subscriptions Store Engine (plugins/localStore.js)
     assert.strictEqual(getBadge(100), '99');
     assert.strictEqual(getBadge(500), '99');
   });
+
+  test('syncUserSubscriptionsFromServer restores user subscriptions from server bookmarks and mediaProgress', async () => {
+    const store = createStore();
+    const userId = 'cavant';
+    const server = 'https://audio.example.com';
+
+    // Mock user object returned from /api/authorize
+    const mockUser = {
+      id: userId,
+      bookmarks: [
+        { libraryItemId: 'knowledge-fight-id', title: 'cs_subscription', time: 0 },
+        { libraryItemId: 'book-123', title: 'Great chapter', time: 420 }
+      ],
+      mediaProgress: [
+        { libraryItemId: 'knowledge-fight-id', episodeId: 'kf-ep-900', currentTime: 1500, duration: 3000 },
+        { libraryItemId: 'hardcore-history-id', episodeId: 'hh-ep-60', currentTime: 300, duration: 18000 }
+      ]
+    };
+
+    const synced = await store.syncUserSubscriptionsFromServer(userId, server, mockUser);
+    assert.ok(synced.includes('knowledge-fight-id'), 'Knowledge Fight should be restored');
+    assert.ok(synced.includes('hardcore-history-id'), 'Hardcore History should be restored');
+    assert.ok(!synced.includes('book-123'), 'Non-subscription book bookmark should not be added as a podcast subscription');
+
+    // Verify persisted
+    const stored = await store.getUserPodcastSubscriptions(userId, server);
+    assert.deepStrictEqual(stored.sort(), synced.sort());
+  });
 });

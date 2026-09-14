@@ -64,6 +64,9 @@ class PlaybackSession(
   val isLocal
     get() = playMethod == PLAYMETHOD_LOCAL
   @get:JsonIgnore
+  val isDirectStream
+    get() = playMethod == PLAYMETHOD_DIRECTSTREAM
+  @get:JsonIgnore
   val isPodcastEpisode
     get() = mediaType == "podcast"
   @get:JsonIgnore
@@ -78,8 +81,13 @@ class PlaybackSession(
   @get:JsonIgnore
   val localMediaProgressId
     get() =
-            if (localEpisodeId.isNullOrEmpty()) localLibraryItemId
-            else "$localLibraryItemId-$localEpisodeId"
+            if (isLocal) {
+              if (localEpisodeId.isNullOrEmpty()) localLibraryItemId
+              else "$localLibraryItemId-$localEpisodeId"
+            } else {
+              if (episodeId.isNullOrEmpty()) libraryItemId ?: ""
+              else "$libraryItemId-$episodeId"
+            }
   @get:JsonIgnore
   val progress
     get() = currentTime / getTotalDuration()

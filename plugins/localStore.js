@@ -219,7 +219,14 @@ export class LocalStorage {
   async getUserPodcastSubscriptions(userId, serverAddress) {
     if (!userId || !serverAddress) return null
     try {
-      const obj = await this.preferences.get({ key: this._subKey(userId, serverAddress) }) || {}
+      let obj = (await this.preferences.get({ key: this._subKey(userId, serverAddress) })) || {}
+      if (!obj.value) {
+        const fallbackAddr = (serverAddress || '').replace(/\/+$/, '').toLowerCase()
+        const fallbackKey = `podcast_subs_${fallbackAddr}_${userId}`
+        if (fallbackKey !== this._subKey(userId, serverAddress)) {
+          obj = (await this.preferences.get({ key: fallbackKey })) || {}
+        }
+      }
       return obj.value ? JSON.parse(obj.value) : null
     } catch (error) {
       console.error('[LocalStorage] Failed to get podcast subscriptions', error)
@@ -236,20 +243,56 @@ export class LocalStorage {
     }
   }
 
-  async addUserPodcastSubscription(userId, serverAddress, itemId) {
+  async syncUserSubscriptionsFromServer(userId, serverAddress, user, nativeHttp = null) {
+    if (!userId || !serverAddress || !user) return []
+    let currentSubs = await this.getUserPodcastSubscriptions(userId, serverAddress)
+    const discoveredSubs = new Set(currentSubs || [])
+
+    // 1. Recover subscriptions from user.bookmarks where title === 'cs_subscription'
+    if (user.bookmarks && Array.isArray(user.bookmarks)) {
+      user.bookmarks.forEach((bm) => {
+        if (bm.title === 'cs_subscription' && bm.libraryItemId) {
+          discoveredSubs.add(bm.libraryItemId)
+        }
+      })
+    }
+
+    // 2. Recover subscriptions from user.mediaProgress for podcast items
+    if (user.mediaProgress && Array.isArray(user.mediaProgress)) {
+      user.mediaProgress.forEach((mp) => {
+        if (mp.libraryItemId && (mp.episodeId || mp.mediaType === 'podcast')) {
+          discoveredSubs.add(mp.libraryItemId)
+        }
+      })
+    }
+
+    const merged = Array.from(discoveredSubs)
+    if (merged.length || currentSubs === null) {
+      await this.setUserPodcastSubscriptions(userId, serverAddress, merged)
+    }
+    return merged
+  }
+
+  async addUserPodcastSubscription(userId, serverAddress, itemId, nativeHttp = null) {
     if (!userId || !serverAddress || !itemId) return
     const subs = (await this.getUserPodcastSubscriptions(userId, serverAddress)) || []
     if (!subs.includes(itemId)) {
       subs.push(itemId)
       await this.setUserPodcastSubscriptions(userId, serverAddress, subs)
     }
+    if (nativeHttp) {
+      nativeHttp.post(`/api/me/item/${itemId}/bookmark`, { title: 'cs_subscription', time: 0 }).catch(() => {})
+    }
   }
 
-  async removeUserPodcastSubscription(userId, serverAddress, itemId) {
+  async removeUserPodcastSubscription(userId, serverAddress, itemId, nativeHttp = null) {
     if (!userId || !serverAddress || !itemId) return
     const subs = (await this.getUserPodcastSubscriptions(userId, serverAddress)) || []
-    const filtered = subs.filter(id => id !== itemId)
+    const filtered = subs.filter((id) => id !== itemId)
     await this.setUserPodcastSubscriptions(userId, serverAddress, filtered)
+    if (nativeHttp) {
+      nativeHttp.delete(`/api/me/item/${itemId}/bookmark/0`).catch(() => {})
+    }
   }
 
   // ── Per-User Podcast Favorites Management ────────────────────────────
@@ -267,7 +310,14 @@ export class LocalStorage {
   async getUserPodcastFavorites(userId, serverAddress) {
     if (!userId || !serverAddress) return []
     try {
-      const obj = await this.preferences.get({ key: this._favKey(userId, serverAddress) }) || {}
+      let obj = (await this.preferences.get({ key: this._favKey(userId, serverAddress) })) || {}
+      if (!obj.value) {
+        const fallbackAddr = (serverAddress || '').replace(/\/+$/, '').toLowerCase()
+        const fallbackKey = `podcast_favs_${fallbackAddr}_${userId}`
+        if (fallbackKey !== this._favKey(userId, serverAddress)) {
+          obj = (await this.preferences.get({ key: fallbackKey })) || {}
+        }
+      }
       return obj.value ? JSON.parse(obj.value) : []
     } catch (error) {
       console.error('[LocalStorage] Failed to get podcast favorites', error)

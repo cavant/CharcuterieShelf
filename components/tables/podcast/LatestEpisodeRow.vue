@@ -379,6 +379,11 @@ export default {
             this.$store.commit('globals/updateLocalMediaProgress', localMediaProgress)
           }
         }
+        if (this.libraryItemId && this.episode?.id && !this.isLocal) {
+          this.$nativeHttp
+            .patch(`/api/me/progress/${this.libraryItemId}/${this.episode.id}`, { isFinished })
+            .catch((e) => console.error('Failed to sync progress to server', e))
+        }
         this.isProcessingReadUpdate = false
       } else {
         const updatePayload = {

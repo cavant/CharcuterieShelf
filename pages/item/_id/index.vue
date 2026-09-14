@@ -778,22 +778,21 @@ export default {
     },
     async checkSubscriptionStatus() {
       if (!this.isPodcast || !this.user?.id || !this.currentServerAddress) return
-      const subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.currentServerAddress)
-      if (subs === null) {
-        this.isSubscribed = true
-      } else {
-        this.isSubscribed = subs.includes(this.libraryItemId)
+      let subs = await this.$localStore.getUserPodcastSubscriptions(this.user.id, this.currentServerAddress)
+      if (subs === null && this.user) {
+        subs = await this.$localStore.syncUserSubscriptionsFromServer(this.user.id, this.currentServerAddress, this.user, this.$nativeHttp)
       }
+      this.isSubscribed = Array.isArray(subs) ? subs.includes(this.libraryItemId) : false
     },
     async togglePodcastSubscription() {
       if (!this.user?.id || !this.currentServerAddress || !this.libraryItemId) return
       await this.$hapticsImpact()
       if (this.isSubscribed) {
-        await this.$localStore.removeUserPodcastSubscription(this.user.id, this.currentServerAddress, this.libraryItemId)
+        await this.$localStore.removeUserPodcastSubscription(this.user.id, this.currentServerAddress, this.libraryItemId, this.$nativeHttp)
         this.isSubscribed = false
         this.$toast.info(`Unsubscribed from "${this.title}"`)
       } else {
-        await this.$localStore.addUserPodcastSubscription(this.user.id, this.currentServerAddress, this.libraryItemId)
+        await this.$localStore.addUserPodcastSubscription(this.user.id, this.currentServerAddress, this.libraryItemId, this.$nativeHttp)
         this.isSubscribed = true
         this.$toast.success(`Subscribed to "${this.title}"`)
       }
